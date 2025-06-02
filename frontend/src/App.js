@@ -1,26 +1,57 @@
 import React, { useState, useEffect } from "react";
 import "./App.css";
-import { BrowserRouter, Routes, Route, Navigate, Link, useLocation } from "react-router-dom";
+import { BrowserRouter as Router, Route, Routes, Link, Navigate, useLocation } from "react-router-dom";
 import axios from "axios";
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-const API = `${BACKEND_URL}/api`;
+const API = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001';
 
-// Set up axios defaults
-axios.defaults.headers.common['Content-Type'] = 'application/json';
+// Enhanced Progress Wizard Component
+const ProgressWizard = ({ currentStep, totalSteps, completedSteps }) => {
+  const progressPercentage = (completedSteps / totalSteps) * 100;
+  
+  return (
+    <div className="mb-8 bg-white rounded-xl shadow-lg p-6">
+      <h2 className="text-2xl font-bold text-gray-900 mb-4">📊 Your Relocation Progress</h2>
+      <div className="flex items-center justify-between mb-4">
+        <span className="text-sm font-medium text-blue-700">Step {currentStep} of {totalSteps}</span>
+        <span className="text-sm font-medium text-blue-700">{Math.round(progressPercentage)}% Complete</span>
+      </div>
+      <div className="w-full bg-gray-200 rounded-full h-3 mb-4">
+        <div 
+          className="bg-gradient-to-r from-blue-500 to-purple-600 h-3 rounded-full transition-all duration-500 ease-out"
+          style={{ width: `${progressPercentage}%` }}
+        ></div>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+        <div className="bg-blue-50 rounded-lg p-3">
+          <div className="text-2xl font-bold text-blue-600">{completedSteps}</div>
+          <div className="text-sm text-gray-600">Completed</div>
+        </div>
+        <div className="bg-yellow-50 rounded-lg p-3">
+          <div className="text-2xl font-bold text-yellow-600">{totalSteps - completedSteps}</div>
+          <div className="text-sm text-gray-600">Remaining</div>
+        </div>
+        <div className="bg-green-50 rounded-lg p-3">
+          <div className="text-2xl font-bold text-green-600">{totalSteps}</div>
+          <div className="text-sm text-gray-600">Total Steps</div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
-// Navigation Component
+// Navigation Component with Wizard Step Indicators
 const Navigation = ({ user, onLogout, currentPath }) => {
   const navItems = [
-    { path: "/dashboard", name: "Dashboard", icon: "🏠" },
-    { path: "/timeline", name: "Timeline", icon: "📅" },
-    { path: "/progress", name: "Progress", icon: "📊" },
-    { path: "/analytics", name: "Analytics", icon: "📈" },
-    { path: "/housing", name: "Housing", icon: "🏘️" },
-    { path: "/employment", name: "Jobs", icon: "💼" },
-    { path: "/visa", name: "Visa & Legal", icon: "📋" },
-    { path: "/resources", name: "Resources", icon: "🔗" },
-    { path: "/logistics", name: "Logistics", icon: "📦" }
+    { path: "/dashboard", name: "Dashboard", icon: "🏠", step: 1, description: "Overview & Getting Started" },
+    { path: "/timeline", name: "Timeline", icon: "📅", step: 2, description: "Complete Step-by-Step Guide" },
+    { path: "/progress", name: "Progress", icon: "📊", step: 3, description: "Track Your Tasks" },
+    { path: "/visa", name: "Visa & Legal", icon: "📋", step: 4, description: "Documentation & Legal" },
+    { path: "/employment", name: "Jobs", icon: "💼", step: 5, description: "Find Employment" },
+    { path: "/housing", name: "Housing", icon: "🏘️", step: 6, description: "Find Your New Home" },
+    { path: "/logistics", name: "Logistics", icon: "📦", step: 7, description: "Plan Your Move" },
+    { path: "/analytics", name: "Analytics", icon: "📈", step: 8, description: "Review Progress" },
+    { path: "/resources", name: "Resources", icon: "🔗", step: 9, description: "Additional Resources" }
   ];
 
   return (
@@ -32,6 +63,7 @@ const Navigation = ({ user, onLogout, currentPath }) => {
               <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                 🏔️ Relocate Me
               </span>
+              <span className="ml-2 text-sm text-gray-500 hidden lg:block">Phoenix → Peak District</span>
             </Link>
           </div>
           
@@ -40,14 +72,20 @@ const Navigation = ({ user, onLogout, currentPath }) => {
               <Link
                 key={item.path}
                 to={item.path}
-                className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200 ${
+                className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200 relative group ${
                   currentPath === item.path
                     ? 'bg-blue-100 text-blue-700'
                     : 'text-gray-600 hover:text-blue-700 hover:bg-gray-100'
                 }`}
               >
                 <span className="mr-1">{item.icon}</span>
-                {item.name}
+                <span className="font-medium">{item.step}.</span> {item.name}
+                
+                {/* Tooltip */}
+                <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-50">
+                  Step {item.step}: {item.description}
+                  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-b-gray-900"></div>
+                </div>
               </Link>
             ))}
           </div>
@@ -63,9 +101,9 @@ const Navigation = ({ user, onLogout, currentPath }) => {
           </div>
         </div>
         
-        {/* Mobile Navigation */}
+        {/* Mobile Navigation with Step Numbers */}
         <div className="md:hidden pb-3">
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-3 gap-2">
             {navItems.map(item => (
               <Link
                 key={item.path}
@@ -76,8 +114,8 @@ const Navigation = ({ user, onLogout, currentPath }) => {
                     : 'text-gray-600'
                 }`}
               >
-                <div>{item.icon}</div>
-                <div>{item.name}</div>
+                <div className="text-lg">{item.icon}</div>
+                <div className="font-medium">{item.step}. {item.name}</div>
               </Link>
             ))}
           </div>
@@ -87,394 +125,152 @@ const Navigation = ({ user, onLogout, currentPath }) => {
   );
 };
 
-// Login component
-const Login = ({ onLogin }) => {
-  const [credentials, setCredentials] = useState({ username: "", password: "" });
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [showReset, setShowReset] = useState(false);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-
-    try {
-      const response = await axios.post(`${API}/auth/login`, credentials);
-      localStorage.setItem("token", response.data.access_token);
-      axios.defaults.headers.common['Authorization'] = `Bearer ${response.data.access_token}`;
-      onLogin(response.data.access_token);
-    } catch (err) {
-      setError("Invalid credentials. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">Relocate Me</h1>
-          <p className="text-gray-600">Your Journey to Peak District Starts Here</p>
-        </div>
-
-        {!showReset ? (
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {error && (
-              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-                {error}
-              </div>
-            )}
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Username
-              </label>
-              <input
-                type="text"
-                value={credentials.username}
-                onChange={(e) => setCredentials({ ...credentials, username: e.target.value })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Enter your username"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Password
-              </label>
-              <input
-                type="password"
-                value={credentials.password}
-                onChange={(e) => setCredentials({ ...credentials, password: e.target.value })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Enter your password"
-                required
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 px-4 rounded-lg hover:from-blue-700 hover:to-purple-700 transition duration-300 disabled:opacity-50"
-            >
-              {loading ? "Logging in..." : "Login"}
-            </button>
-
-            <div className="text-center">
-              <button
-                type="button"
-                onClick={() => setShowReset(true)}
-                className="text-blue-600 hover:text-blue-800 text-sm"
-              >
-                Forgot your password?
-              </button>
-            </div>
-          </form>
-        ) : (
-          <PasswordResetForm onBack={() => setShowReset(false)} />
-        )}
-
-        <div className="mt-6 text-center">
-          <p className="text-sm text-gray-600">
-            Demo credentials: relocate_user / SecurePass2025!
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// Password Reset Component
-const PasswordResetForm = ({ onBack }) => {
-  const [step, setStep] = useState(1);
-  const [username, setUsername] = useState("");
-  const [resetCode, setResetCode] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
-
-  const handleRequestReset = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-
-    try {
-      const response = await axios.post(`${API}/auth/reset-password`, { username });
-      setMessage(`Reset code generated: ${response.data.reset_code}`);
-      setStep(2);
-    } catch (err) {
-      setError("Error requesting password reset. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleCompleteReset = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-
-    try {
-      await axios.post(`${API}/auth/complete-password-reset`, {
-        username,
-        reset_code: resetCode,
-        new_password: newPassword
-      });
-      setMessage("Password reset successfully! You can now login with your new password.");
-      setTimeout(() => onBack(), 3000);
-    } catch (err) {
-      setError(err.response?.data?.detail || "Error resetting password. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="space-y-6">
-      <div className="text-center">
-        <h2 className="text-2xl font-bold text-gray-800 mb-2">Reset Password</h2>
-        <p className="text-gray-600">Step {step} of 2</p>
-      </div>
-
-      {message && (
-        <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
-          {message}
-        </div>
-      )}
-
-      {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-          {error}
-        </div>
-      )}
-
-      {step === 1 ? (
-        <form onSubmit={handleRequestReset} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Username
-            </label>
-            <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Enter your username"
-              required
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition duration-300 disabled:opacity-50"
-          >
-            {loading ? "Requesting..." : "Request Reset Code"}
-          </button>
-        </form>
-      ) : (
-        <form onSubmit={handleCompleteReset} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Reset Code
-            </label>
-            <input
-              type="text"
-              value={resetCode}
-              onChange={(e) => setResetCode(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Enter reset code"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              New Password
-            </label>
-            <input
-              type="password"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Enter new password"
-              required
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 transition duration-300 disabled:opacity-50"
-          >
-            {loading ? "Resetting..." : "Reset Password"}
-          </button>
-        </form>
-      )}
-
-      <div className="text-center">
-        <button
-          onClick={onBack}
-          className="text-gray-600 hover:text-gray-800 text-sm"
-        >
-          ← Back to Login
-        </button>
-      </div>
-    </div>
-  );
-};
-
-// Dashboard Page Component
+// Enhanced Dashboard with Wizard Introduction
 const DashboardPage = () => {
-  const [dashboardData, setDashboardData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({
+    total_steps: 34,
+    completed_steps: 0,
+    in_progress: 0,
+    urgent_tasks: 0
+  });
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchStats = async () => {
       try {
         const response = await axios.get(`${API}/dashboard/overview`);
-        setDashboardData(response.data);
+        setStats(response.data);
       } catch (error) {
-        console.error("Error fetching dashboard data:", error);
-      } finally {
-        setLoading(false);
+        console.error('Error fetching dashboard stats:', error);
       }
     };
-    fetchData();
+    fetchStats();
   }, []);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading dashboard...</p>
-        </div>
-      </div>
-    );
-  }
+  const quickStartSteps = [
+    {
+      title: "📋 Get Your Documents Ready",
+      description: "Start by gathering essential documents like passport, birth certificate, and financial records.",
+      action: "Go to Visa & Legal",
+      link: "/visa",
+      urgent: true
+    },
+    {
+      title: "📅 Create Your Timeline",
+      description: "Review our comprehensive 34-step relocation timeline tailored for your move.",
+      action: "View Timeline",
+      link: "/timeline",
+      urgent: false
+    },
+    {
+      title: "💼 Start Job Hunting",
+      description: "Browse 8 real job opportunities in the Peak District area.",
+      action: "Browse Jobs",
+      link: "/employment",
+      urgent: false
+    }
+  ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Hero Section */}
-      <div 
-        className="relative bg-cover bg-center h-64 flex items-center justify-center text-white"
-        style={{
-          backgroundImage: "linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('https://images.unsplash.com/photo-1473625247510-8ceb1760943f')"
-        }}
-      >
-        <div className="text-center">
-          <h1 className="text-4xl font-bold mb-2">Your Phoenix to Peak District Journey</h1>
-          <p className="text-lg">Making your relocation dreams a reality with expert guidance</p>
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Quick Stats */}
-        {dashboardData && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-blue-500">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Progress</p>
-                  <p className="text-2xl font-bold text-gray-900">{dashboardData.relocation_progress.completion_percentage}%</p>
-                  <p className="text-sm text-green-600 mt-1">
-                    {dashboardData.relocation_progress.completed_steps_count}/{dashboardData.relocation_progress.total_steps} steps
-                  </p>
-                </div>
-                <div className="text-3xl">📊</div>
-              </div>
-            </div>
-            
-            <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-green-500">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Days Until Move</p>
-                  <p className="text-2xl font-bold text-gray-900">{dashboardData.quick_stats.days_until_move}</p>
-                  <p className="text-sm text-blue-600 mt-1">Target date set</p>
-                </div>
-                <div className="text-3xl">📅</div>
-              </div>
-            </div>
-            
-            <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-purple-500">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Budget Allocated</p>
-                  <p className="text-2xl font-bold text-gray-900">${dashboardData.quick_stats.budget_allocated.toLocaleString()}</p>
-                  <p className="text-sm text-purple-600 mt-1">Financial planning</p>
-                </div>
-                <div className="text-3xl">💰</div>
-              </div>
-            </div>
-            
-            <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-orange-500">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Current Phase</p>
-                  <p className="text-xl font-bold text-gray-900">{dashboardData.relocation_progress.current_phase}</p>
-                  <p className="text-sm text-orange-600 mt-1">Active stage</p>
-                </div>
-                <div className="text-3xl">🚀</div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Quick Actions */}
-        <div className="grid md:grid-cols-3 gap-6 mb-8">
-          <Link to="/timeline" className="bg-gradient-to-br from-blue-500 to-blue-600 text-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-            <div className="text-center">
-              <div className="text-4xl mb-3">📅</div>
-              <h3 className="text-lg font-semibold mb-2">View Timeline</h3>
-              <p className="text-sm opacity-90">Track your relocation milestones</p>
-            </div>
-          </Link>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 p-6">
+      <div className="max-w-7xl mx-auto">
+        {/* Hero Section */}
+        <div className="text-center mb-12">
+          <h1 className="text-4xl md:text-6xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-4">
+            Welcome to Your Relocation Journey! 🌟
+          </h1>
+          <p className="text-xl text-gray-600 mb-6 max-w-3xl mx-auto">
+            Your comprehensive guide from Phoenix, Arizona to the beautiful Peak District, UK. 
+            Follow our step-by-step wizard to make your international move smooth and organized.
+          </p>
           
-          <Link to="/housing" className="bg-gradient-to-br from-green-500 to-green-600 text-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-            <div className="text-center">
-              <div className="text-4xl mb-3">🏠</div>
-              <h3 className="text-lg font-semibold mb-2">Find Housing</h3>
-              <p className="text-sm opacity-90">Explore Peak District properties</p>
-            </div>
-          </Link>
-          
-          <Link to="/resources" className="bg-gradient-to-br from-purple-500 to-purple-600 text-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-            <div className="text-center">
-              <div className="text-4xl mb-3">🔗</div>
-              <h3 className="text-lg font-semibold mb-2">Resources</h3>
-              <p className="text-sm opacity-90">Essential links and tools</p>
-            </div>
-          </Link>
+          {/* Progress Overview */}
+          <ProgressWizard 
+            currentStep={stats.completed_steps + 1} 
+            totalSteps={stats.total_steps} 
+            completedSteps={stats.completed_steps} 
+          />
         </div>
 
-        {/* Recent Activity */}
-        {dashboardData && (
-          <div className="bg-white rounded-xl shadow-lg p-6">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">Recent Activity</h2>
-            <div className="space-y-4">
-              {dashboardData.recent_activity.map((activity, index) => (
-                <div key={index} className="flex items-center space-x-3">
-                  <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                  <span className="text-gray-700">{activity}</span>
-                  <span className="text-sm text-gray-400">• Just now</span>
-                </div>
-              ))}
-            </div>
+        {/* Quick Start Guide */}
+        <div className="mb-12">
+          <h2 className="text-3xl font-bold text-gray-900 mb-6 text-center">🚀 Quick Start Guide</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {quickStartSteps.map((step, index) => (
+              <div key={index} className={`bg-white rounded-xl shadow-lg p-6 transform hover:scale-105 transition-all duration-300 ${step.urgent ? 'ring-2 ring-red-200' : ''}`}>
+                {step.urgent && (
+                  <div className="flex items-center mb-3">
+                    <span className="bg-red-100 text-red-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
+                      🚨 Urgent
+                    </span>
+                  </div>
+                )}
+                <h3 className="text-xl font-bold text-gray-900 mb-3">{step.title}</h3>
+                <p className="text-gray-600 mb-4">{step.description}</p>
+                <Link 
+                  to={step.link}
+                  className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition duration-300 font-medium"
+                >
+                  {step.action} →
+                </Link>
+              </div>
+            ))}
           </div>
-        )}
+        </div>
+
+        {/* Stats Overview */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
+          <div className="bg-white rounded-xl shadow-lg p-6 text-center">
+            <div className="text-3xl font-bold text-blue-600 mb-2">{stats.total_steps}</div>
+            <div className="text-gray-600">Total Steps</div>
+          </div>
+          <div className="bg-white rounded-xl shadow-lg p-6 text-center">
+            <div className="text-3xl font-bold text-green-600 mb-2">{stats.completed_steps}</div>
+            <div className="text-gray-600">Completed</div>
+          </div>
+          <div className="bg-white rounded-xl shadow-lg p-6 text-center">
+            <div className="text-3xl font-bold text-yellow-600 mb-2">{stats.in_progress}</div>
+            <div className="text-gray-600">In Progress</div>
+          </div>
+          <div className="bg-white rounded-xl shadow-lg p-6 text-center">
+            <div className="text-3xl font-bold text-red-600 mb-2">{stats.urgent_tasks}</div>
+            <div className="text-gray-600">Urgent Tasks</div>
+          </div>
+        </div>
+
+        {/* Next Steps */}
+        <div className="bg-white rounded-xl shadow-lg p-8 text-center">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">🎯 Ready to Start?</h2>
+          <p className="text-gray-600 mb-6">
+            Begin your relocation journey with our comprehensive step-by-step guide. Each step is designed to help you progress smoothly towards your move to the Peak District.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link 
+              to="/timeline"
+              className="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 transition duration-300 font-medium"
+            >
+              📅 Start with Timeline
+            </Link>
+            <Link 
+              to="/progress"
+              className="bg-purple-600 text-white px-8 py-3 rounded-lg hover:bg-purple-700 transition duration-300 font-medium"
+            >
+              📊 Track Progress
+            </Link>
+          </div>
+        </div>
       </div>
     </div>
   );
 };
 
-// Timeline Page Component
+// Enhanced Timeline Page with Wizard Steps
 const TimelinePage = () => {
-  const [timelineData, setTimelineData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [activeCategory, setActiveCategory] = useState("all");
+  const [timelineData, setTimelineData] = useState({
+    full: { steps: [] },
+    categories: {}
+  });
+  const [activeCategory, setActiveCategory] = useState('all');
+  const [completedCount, setCompletedCount] = useState(0);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -487,10 +283,12 @@ const TimelinePage = () => {
           full: fullResponse.data,
           categories: categoryResponse.data
         });
+        
+        // Count completed steps
+        const completed = fullResponse.data.steps.filter(step => step.is_completed).length;
+        setCompletedCount(completed);
       } catch (error) {
-        console.error("Error fetching timeline data:", error);
-      } finally {
-        setLoading(false);
+        console.error('Error fetching timeline data:', error);
       }
     };
     fetchData();
@@ -512,95 +310,64 @@ const TimelinePage = () => {
         full: fullResponse.data,
         categories: categoryResponse.data
       });
+      
+      // Update completed count
+      const newCompleted = fullResponse.data.steps.filter(step => step.is_completed).length;
+      setCompletedCount(newCompleted);
+      
     } catch (error) {
-      console.error("Error updating progress:", error);
+      console.error('Error updating step progress:', error);
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading timeline...</p>
-        </div>
-      </div>
-    );
-  }
-
-  const categories = timelineData ? Object.keys(timelineData.categories) : [];
-  const filteredSteps = activeCategory === "all" 
-    ? timelineData?.full?.timeline || []
-    : timelineData?.categories[activeCategory]?.steps || [];
+  const categories = Object.keys(timelineData.categories);
+  const filteredSteps = activeCategory === 'all' 
+    ? timelineData.full.steps 
+    : timelineData.categories[activeCategory] || [];
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div 
-        className="relative bg-cover bg-center h-48 flex items-center justify-center text-white"
-        style={{
-          backgroundImage: "linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('https://images.pexels.com/photos/7550933/pexels-photo-7550933.jpeg')"
-        }}
-      >
-        <div className="text-center">
-          <h1 className="text-4xl font-bold mb-2">Relocation Timeline</h1>
-          <p className="text-lg">Your step-by-step journey to Peak District</p>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 p-6">
+      <div className="max-w-6xl mx-auto">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-4">
+            📅 Your Relocation Timeline
+          </h1>
+          <p className="text-xl text-gray-600 mb-6">
+            Follow this comprehensive 34-step guide for your move from Phoenix to Peak District
+          </p>
+          
+          <ProgressWizard 
+            currentStep={completedCount + 1} 
+            totalSteps={timelineData.full.steps.length} 
+            completedSteps={completedCount} 
+          />
         </div>
-      </div>
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Progress Overview */}
-        {timelineData && (
-          <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
-            <div className="grid md:grid-cols-3 gap-6">
-              <div className="text-center">
-                <div className="text-3xl font-bold text-blue-600">{timelineData.full.completed_steps}</div>
-                <div className="text-gray-600">Steps Completed</div>
-              </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-green-600">{timelineData.full.completion_percentage.toFixed(1)}%</div>
-                <div className="text-gray-600">Overall Progress</div>
-              </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-purple-600">{timelineData.full.current_phase}</div>
-                <div className="text-gray-600">Current Phase</div>
-              </div>
-            </div>
-            <div className="mt-6">
-              <div className="w-full bg-gray-200 rounded-full h-3">
-                <div
-                  className="bg-gradient-to-r from-blue-500 to-green-500 h-3 rounded-full transition-all duration-500"
-                  style={{ width: `${timelineData.full.completion_percentage}%` }}
-                ></div>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Category Filter */}
         <div className="mb-8">
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 justify-center">
             <button
-              onClick={() => setActiveCategory("all")}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 ${
-                activeCategory === "all"
+              onClick={() => setActiveCategory('all')}
+              className={`px-4 py-2 rounded-full font-medium transition-colors duration-200 ${
+                activeCategory === 'all'
                   ? 'bg-blue-600 text-white'
-                  : 'bg-white text-gray-600 hover:bg-gray-100'
+                  : 'bg-white text-gray-600 hover:bg-blue-100'
               }`}
             >
-              All Steps
+              🌟 All Steps ({timelineData.full.steps.length})
             </button>
             {categories.map(category => (
               <button
                 key={category}
                 onClick={() => setActiveCategory(category)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 ${
+                className={`px-4 py-2 rounded-full font-medium transition-colors duration-200 capitalize ${
                   activeCategory === category
                     ? 'bg-blue-600 text-white'
-                    : 'bg-white text-gray-600 hover:bg-gray-100'
+                    : 'bg-white text-gray-600 hover:bg-blue-100'
                 }`}
               >
-                {category} ({timelineData?.categories[category]?.completed_steps}/{timelineData?.categories[category]?.total_steps})
+                {category.replace('_', ' ')} ({(timelineData.categories[category] || []).length})
               </button>
             ))}
           </div>
@@ -611,1321 +378,87 @@ const TimelinePage = () => {
           {filteredSteps.map((step, index) => (
             <div
               key={step.id}
-              className={`bg-white rounded-xl shadow-lg p-6 border-l-4 ${
-                step.is_completed ? 'border-green-500' : 'border-gray-300'
+              className={`bg-white rounded-xl shadow-lg p-6 border-l-4 transition-all duration-300 hover:shadow-xl ${
+                step.is_completed ? 'border-green-500 bg-green-50' : 'border-blue-500'
               }`}
             >
               <div className="flex items-start justify-between">
                 <div className="flex-1">
-                  <div className="flex items-center mb-2">
-                    <input
-                      type="checkbox"
-                      checked={step.is_completed}
-                      onChange={(e) => updateStepProgress(step.id, e.target.checked)}
-                      className="mr-3 h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                    />
-                    <h3 className={`text-lg font-semibold ${step.is_completed ? 'text-green-700 line-through' : 'text-gray-900'}`}>
-                      {step.title}
-                    </h3>
-                    <span className="ml-3 px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">
-                      {step.category}
-                    </span>
-                  </div>
-                  <p className="text-gray-600 mb-3">{step.description}</p>
-                  <div className="flex items-center text-sm text-gray-500">
-                    <span className="mr-4">⏱️ {step.estimated_days} days</span>
-                    {step.dependencies.length > 0 && (
-                      <span>🔗 Depends on steps: {step.dependencies.join(", ")}</span>
-                    )}
-                  </div>
-                  {step.resources.length > 0 && (
-                    <div className="mt-3">
-                      <h4 className="text-sm font-medium text-gray-700 mb-2">Resources:</h4>
-                      <div className="flex flex-wrap gap-2">
-                        {step.resources.map((resource, idx) => (
-                          <span key={idx} className="px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded">
-                            {resource}
+                  <div className="flex items-center mb-4">
+                    <div className="mr-4 flex-shrink-0">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white ${
+                        step.is_completed ? 'bg-green-500' : 'bg-blue-500'
+                      }`}>
+                        {step.is_completed ? '✓' : index + 1}
+                      </div>
+                    </div>
+                    <div className="flex-1">
+                      <label className="flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={step.is_completed}
+                          onChange={(e) => updateStepProgress(step.id, e.target.checked)}
+                          className="mr-3 h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        />
+                        <h3 className={`text-xl font-bold transition-all duration-200 ${
+                          step.is_completed ? 'text-green-700 line-through' : 'text-gray-900'
+                        }`}>
+                          {step.title}
+                        </h3>
+                      </label>
+                      <div className="flex items-center mt-2 space-x-3">
+                        <span className="px-3 py-1 text-sm rounded-full bg-blue-100 text-blue-800 font-medium">
+                          {step.category}
+                        </span>
+                        <span className={`px-3 py-1 text-sm rounded-full font-medium ${
+                          step.priority === 'high' ? 'bg-red-100 text-red-800' :
+                          step.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-green-100 text-green-800'
+                        }`}>
+                          {step.priority} priority
+                        </span>
+                        {step.due_date && (
+                          <span className="px-3 py-1 text-sm rounded-full bg-purple-100 text-purple-800 font-medium">
+                            📅 Due: {new Date(step.due_date).toLocaleDateString()}
                           </span>
-                        ))}
+                        )}
                       </div>
                     </div>
-                  )}
-                </div>
-                <div className="ml-4">
-                  {step.is_completed ? (
-                    <div className="text-green-500 text-2xl">✅</div>
-                  ) : (
-                    <div className="text-gray-400 text-2xl">⭕</div>
-                  )}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// Resources Page Component
-const ResourcesPage = () => {
-  const [resources, setResources] = useState(null);
-  const [loadingResources, setLoadingResources] = useState(true);
-
-  useEffect(() => {
-    const fetchResources = async () => {
-      try {
-        const response = await axios.get(`${API}/resources/all`);
-        setResources(response.data);
-      } catch (error) {
-        console.error("Error fetching resources:", error);
-      } finally {
-        setLoadingResources(false);
-      }
-    };
-    fetchResources();
-  }, []);
-
-  if (loadingResources) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading resources...</p>
-        </div>
-      </div>
-    );
-  }
-
-  const ResourceCard = ({ resource, color }) => (
-    <a
-      href={resource.url}
-      target="_blank"
-      rel="noopener noreferrer"
-      className={`block bg-gradient-to-br ${color} text-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105`}
-    >
-      <h3 className="text-lg font-semibold mb-2">{resource.name}</h3>
-      <p className="text-sm opacity-90">{resource.description}</p>
-      <div className="mt-4 flex items-center justify-between">
-        <span className="text-xs opacity-75">Click to visit</span>
-        <span className="text-lg">🔗</span>
-      </div>
-    </a>
-  );
-
-  const colors = [
-    "from-blue-500 to-blue-600",
-    "from-green-500 to-green-600", 
-    "from-purple-500 to-purple-600",
-    "from-red-500 to-red-600",
-    "from-yellow-500 to-yellow-600",
-    "from-indigo-500 to-indigo-600"
-  ];
-
-  return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div 
-        className="relative bg-cover bg-center h-48 flex items-center justify-center text-white"
-        style={{
-          backgroundImage: "linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('https://images.unsplash.com/photo-1588152850700-c82ecb8ba9b1')"
-        }}
-      >
-        <div className="text-center">
-          <h1 className="text-4xl font-bold mb-2">Essential Resources</h1>
-          <p className="text-lg">Everything you need for your relocation journey</p>
-        </div>
-      </div>
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {resources && Object.entries(resources).map(([category, items], categoryIndex) => (
-          <div key={category} className="mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-6 capitalize">
-              {category.replace('_', ' & ')}
-            </h2>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {items.map((resource, index) => (
-                <ResourceCard 
-                  key={index} 
-                  resource={resource} 
-                  color={colors[(categoryIndex * 3 + index) % colors.length]}
-                />
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
-
-// Housing Page Component  
-const HousingPage = () => {
-  const [housingData, setHousingData] = useState(null);
-  const [loadingHousing, setLoadingHousing] = useState(true);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [phoenixRes, peakRes] = await Promise.all([
-          axios.get(`${API}/housing/phoenix`),
-          axios.get(`${API}/housing/peak-district`)
-        ]);
-        setHousingData({
-          phoenix: phoenixRes.data,
-          peak_district: peakRes.data
-        });
-      } catch (error) {
-        console.error("Error fetching housing data:", error);
-      } finally {
-        setLoadingHousing(false);
-      }
-    };
-    fetchData();
-  }, []);
-
-  if (loadingHousing) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading housing data...</p>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div 
-        className="relative bg-cover bg-center h-48 flex items-center justify-center text-white"
-        style={{
-          backgroundImage: "linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('https://images.unsplash.com/photo-1568190538421-53523065d4b8')"
-        }}
-      >
-        <div className="text-center">
-          <h1 className="text-4xl font-bold mb-2">Housing Comparison</h1>
-          <p className="text-lg">Find your perfect home in Peak District</p>
-        </div>
-      </div>
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {housingData && (
-          <div className="grid md:grid-cols-2 gap-8">
-            {/* Phoenix Housing */}
-            <div className="bg-white rounded-xl shadow-lg p-6">
-              <div className="flex items-center mb-4">
-                <span className="text-3xl mr-3">🌵</span>
-                <h2 className="text-2xl font-bold text-orange-600">Phoenix, Arizona</h2>
-              </div>
-              <div className="space-y-4">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Median Home Price:</span>
-                  <span className="font-semibold">${housingData.phoenix.median_home_price.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Median Rent:</span>
-                  <span className="font-semibold">${housingData.phoenix.median_rent}/month</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Price per sq ft:</span>
-                  <span className="font-semibold">${housingData.phoenix.price_per_sqft}</span>
-                </div>
-                <div className="mt-6">
-                  <h3 className="font-semibold text-gray-700 mb-3">Popular Neighborhoods:</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {housingData.phoenix.popular_neighborhoods.map((area, index) => (
-                      <span key={index} className="px-3 py-1 bg-orange-100 text-orange-800 rounded-full text-sm">
-                        {area}
-                      </span>
-                    ))}
                   </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Peak District Housing */}
-            <div className="bg-white rounded-xl shadow-lg p-6">
-              <div className="flex items-center mb-4">
-                <span className="text-3xl mr-3">🏔️</span>
-                <h2 className="text-2xl font-bold text-green-600">Peak District, UK</h2>
-              </div>
-              <div className="space-y-4">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Median Home Price:</span>
-                  <span className="font-semibold">£{housingData.peak_district.median_home_price.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Median Rent:</span>
-                  <span className="font-semibold">£{housingData.peak_district.median_rent}/month</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Price per sq ft:</span>
-                  <span className="font-semibold">£{housingData.peak_district.price_per_sqft}</span>
-                </div>
-                <div className="mt-6">
-                  <h3 className="font-semibold text-gray-700 mb-3">Popular Areas:</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {housingData.peak_district.popular_areas.map((area, index) => (
-                      <span key={index} className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm">
-                        {area}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Property Search Links */}
-        <div className="mt-12">
-          <h2 className="text-3xl font-bold text-gray-900 mb-6">Property Search Platforms</h2>
-          <div className="grid md:grid-cols-3 gap-6">
-            <a href="https://www.rightmove.co.uk" target="_blank" rel="noopener noreferrer" className="bg-gradient-to-br from-purple-500 to-purple-600 text-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-              <div className="text-center">
-                <div className="text-4xl mb-3">🏠</div>
-                <h3 className="text-lg font-semibold mb-2">Rightmove</h3>
-                <p className="text-sm opacity-90">UK's largest property portal</p>
-              </div>
-            </a>
-            
-            <a href="https://www.zoopla.co.uk" target="_blank" rel="noopener noreferrer" className="bg-gradient-to-br from-blue-500 to-blue-600 text-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-              <div className="text-center">
-                <div className="text-4xl mb-3">🔍</div>
-                <h3 className="text-lg font-semibold mb-2">Zoopla</h3>
-                <p className="text-sm opacity-90">Property search and valuation</p>
-              </div>
-            </a>
-            
-            <a href="https://www.spareroom.co.uk" target="_blank" rel="noopener noreferrer" className="bg-gradient-to-br from-green-500 to-green-600 text-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-              <div className="text-center">
-                <div className="text-4xl mb-3">🛏️</div>
-                <h3 className="text-lg font-semibold mb-2">SpareRoom</h3>
-                <p className="text-sm opacity-90">Room rental and flatshare</p>
-              </div>
-            </a>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// Employment Page Component
-const EmploymentPage = () => {
-  const [jobData, setJobData] = useState(null);
-  const [jobListings, setJobListings] = useState(null);
-  const [filteredJobs, setFilteredJobs] = useState([]);
-  const [selectedCategory, setSelectedCategory] = useState("all");
-  const [selectedJobType, setSelectedJobType] = useState("all");
-  const [loadingJobs, setLoadingJobs] = useState(true);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [jobOpportunitiesRes, jobListingsRes] = await Promise.all([
-          axios.get(`${API}/jobs/opportunities`),
-          axios.get(`${API}/jobs/listings`)
-        ]);
-        setJobData(jobOpportunitiesRes.data);
-        setJobListings(jobListingsRes.data);
-        setFilteredJobs(jobListingsRes.data.jobs);
-      } catch (error) {
-        console.error("Error fetching job data:", error);
-      } finally {
-        setLoadingJobs(false);
-      }
-    };
-    fetchData();
-  }, []);
-
-  useEffect(() => {
-    if (jobListings) {
-      let filtered = jobListings.jobs;
-      
-      if (selectedCategory !== "all") {
-        filtered = filtered.filter(job => job.category === selectedCategory);
-      }
-      
-      if (selectedJobType !== "all") {
-        filtered = filtered.filter(job => job.job_type === selectedJobType);
-      }
-      
-      setFilteredJobs(filtered);
-    }
-  }, [selectedCategory, selectedJobType, jobListings]);
-
-  const JobCard = ({ job }) => (
-    <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-blue-500 hover:shadow-xl transition-all duration-300">
-      <div className="flex justify-between items-start mb-4">
-        <div className="flex-1">
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">{job.title}</h3>
-          <div className="flex items-center text-gray-600 mb-2">
-            <span className="text-sm mr-4">🏢 {job.company}</span>
-            <span className="text-sm mr-4">📍 {job.location}</span>
-          </div>
-          {job.salary && (
-            <div className="text-green-600 font-semibold mb-3">💰 {job.salary}</div>
-          )}
-        </div>
-        <div className="flex flex-col items-end">
-          <span className={`px-3 py-1 text-xs rounded-full ${
-            job.job_type === 'remote' ? 'bg-purple-100 text-purple-800' :
-            job.job_type === 'full-time' ? 'bg-blue-100 text-blue-800' :
-            job.job_type === 'part-time' ? 'bg-green-100 text-green-800' :
-            'bg-gray-100 text-gray-800'
-          }`}>
-            {job.job_type}
-          </span>
-          <span className="text-xs text-gray-500 mt-1">
-            {new Date(job.posted_date).toLocaleDateString()}
-          </span>
-        </div>
-      </div>
-      
-      <p className="text-gray-600 mb-4 text-sm">{job.description}</p>
-      
-      <div className="mb-4">
-        <h4 className="text-sm font-medium text-gray-700 mb-2">Requirements:</h4>
-        <div className="flex flex-wrap gap-2">
-          {job.requirements.slice(0, 3).map((req, index) => (
-            <span key={index} className="px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded">
-              {req}
-            </span>
-          ))}
-          {job.requirements.length > 3 && (
-            <span className="px-2 py-1 text-xs bg-gray-200 text-gray-500 rounded">
-              +{job.requirements.length - 3} more
-            </span>
-          )}
-        </div>
-      </div>
-      
-      <div className="mb-4">
-        <h4 className="text-sm font-medium text-gray-700 mb-2">Benefits:</h4>
-        <div className="flex flex-wrap gap-2">
-          {job.benefits.slice(0, 2).map((benefit, index) => (
-            <span key={index} className="px-2 py-1 text-xs bg-green-100 text-green-700 rounded">
-              {benefit}
-            </span>
-          ))}
-          {job.benefits.length > 2 && (
-            <span className="px-2 py-1 text-xs bg-green-200 text-green-600 rounded">
-              +{job.benefits.length - 2} more
-            </span>
-          )}
-        </div>
-      </div>
-      
-      <div className="flex justify-between items-center">
-        <span className="px-2 py-1 text-xs bg-indigo-100 text-indigo-800 rounded">
-          {job.category}
-        </span>
-        <a
-          href={job.application_url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition duration-300 text-sm"
-        >
-          Apply Now →
-        </a>
-      </div>
-    </div>
-  );
-
-  if (loadingJobs) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading employment data...</p>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div 
-        className="relative bg-cover bg-center h-48 flex items-center justify-center text-white"
-        style={{
-          backgroundImage: "linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('https://images.pexels.com/photos/19860848/pexels-photo-19860848.jpeg')"
-        }}
-      >
-        <div className="text-center">
-          <h1 className="text-4xl font-bold mb-2">Employment Opportunities</h1>
-          <p className="text-lg">Build your career in Peak District</p>
-        </div>
-      </div>
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Job Market Overview */}
-        {jobData && (
-          <div className="grid md:grid-cols-2 gap-8 mb-12">
-            <div className="bg-white rounded-xl shadow-lg p-6">
-              <h2 className="text-2xl font-bold text-orange-600 mb-6">Phoenix Job Market</h2>
-              <div className="space-y-4">
-                {Object.entries(jobData.phoenix_jobs).map(([sector, score]) => (
-                  <div key={sector} className="flex justify-between">
-                    <span className="text-gray-600 capitalize">{sector.replace('_', ' ')}:</span>
-                    <span className="font-semibold">
-                      {typeof score === 'number' && sector !== 'avg_salary_usd' ? `${score}%` : `$${score.toLocaleString()}`}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="bg-white rounded-xl shadow-lg p-6">
-              <h2 className="text-2xl font-bold text-green-600 mb-6">Peak District Opportunities</h2>
-              <div className="space-y-4">
-                {Object.entries(jobData.peak_district_jobs).map(([sector, score]) => (
-                  <div key={sector} className="flex justify-between">
-                    <span className="text-gray-600 capitalize">{sector.replace('_', ' ')}:</span>
-                    <span className="font-semibold">
-                      {typeof score === 'number' && sector !== 'avg_salary_gbp' ? `${score}%` : `£${score.toLocaleString()}`}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Job Listings Section */}
-        {jobListings && (
-          <>
-            <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
-              <div className="flex flex-col md:flex-row md:items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-gray-900 mb-4 md:mb-0">
-                  Available Jobs ({filteredJobs.length})
-                </h2>
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <select
-                    value={selectedCategory}
-                    onChange={(e) => setSelectedCategory(e.target.value)}
-                    className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value="all">All Categories</option>
-                    {jobListings.categories.map(category => (
-                      <option key={category} value={category}>{category}</option>
-                    ))}
-                  </select>
-                  <select
-                    value={selectedJobType}
-                    onChange={(e) => setSelectedJobType(e.target.value)}
-                    className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value="all">All Types</option>
-                    {jobListings.job_types.map(type => (
-                      <option key={type} value={type}>{type}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              
-              <div className="grid gap-6">
-                {filteredJobs.map((job, index) => (
-                  <JobCard key={job.id || index} job={job} />
-                ))}
-              </div>
-              
-              {filteredJobs.length === 0 && (
-                <div className="text-center py-8">
-                  <p className="text-gray-500">No jobs found matching your criteria.</p>
-                </div>
-              )}
-            </div>
-
-            {/* Remote Work Opportunities */}
-            {jobData && (
-              <div className="bg-gradient-to-br from-purple-50 to-blue-50 rounded-xl p-6 mb-12">
-                <h2 className="text-2xl font-bold text-purple-800 mb-6">Remote Work Opportunities</h2>
-                <div className="grid md:grid-cols-3 lg:grid-cols-5 gap-4">
-                  {jobData.remote_work_opportunities.map((opportunity, index) => (
-                    <div key={index} className="bg-white rounded-lg p-4 text-center shadow-md">
-                      <div className="text-2xl mb-2">💻</div>
-                      <div className="text-sm font-medium text-gray-700">{opportunity}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </>
-        )}
-
-        {/* Job Search Platforms */}
-        <div>
-          <h2 className="text-3xl font-bold text-gray-900 mb-6">Job Search Platforms</h2>
-          <div className="grid md:grid-cols-3 gap-6">
-            <a href="https://uk.indeed.com" target="_blank" rel="noopener noreferrer" className="bg-gradient-to-br from-blue-500 to-blue-600 text-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-              <div className="text-center">
-                <div className="text-4xl mb-3">🔍</div>
-                <h3 className="text-lg font-semibold mb-2">Indeed UK</h3>
-                <p className="text-sm opacity-90">Leading job search platform</p>
-              </div>
-            </a>
-            
-            <a href="https://www.reed.co.uk" target="_blank" rel="noopener noreferrer" className="bg-gradient-to-br from-green-500 to-green-600 text-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-              <div className="text-center">
-                <div className="text-4xl mb-3">📄</div>
-                <h3 className="text-lg font-semibold mb-2">Reed</h3>
-                <p className="text-sm opacity-90">UK recruitment specialists</p>
-              </div>
-            </a>
-            
-            <a href="https://www.linkedin.com/jobs" target="_blank" rel="noopener noreferrer" className="bg-gradient-to-br from-purple-500 to-purple-600 text-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-              <div className="text-center">
-                <div className="text-4xl mb-3">💼</div>
-                <h3 className="text-lg font-semibold mb-2">LinkedIn</h3>
-                <p className="text-sm opacity-90">Professional networking</p>
-              </div>
-            </a>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// Visa Page Component
-const VisaPage = () => {
-  const [visaRequirements, setVisaRequirements] = useState(null);
-  const [checklist, setChecklist] = useState(null);
-  const [loadingVisa, setLoadingVisa] = useState(true);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [requirementsRes, checklistRes] = await Promise.all([
-          axios.get(`${API}/visa/requirements`),
-          axios.get(`${API}/visa/checklist`)
-        ]);
-        setVisaRequirements(requirementsRes.data);
-        setChecklist(checklistRes.data);
-      } catch (error) {
-        console.error("Error fetching visa data:", error);
-      } finally {
-        setLoadingVisa(false);
-      }
-    };
-    fetchData();
-  }, []);
-
-  if (loadingVisa) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading visa information...</p>
-        </div>
-      </div>
-    );
-  }
-
-  const VisaTypeCard = ({ visa, index }) => {
-    const colors = [
-      "from-blue-500 to-blue-600",
-      "from-green-500 to-green-600",
-      "from-purple-500 to-purple-600",
-      "from-red-500 to-red-600"
-    ];
-
-    return (
-      <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
-        <div className="flex items-center mb-4">
-          <div className={`w-4 h-4 rounded-full bg-gradient-to-r ${colors[index % colors.length]} mr-3`}></div>
-          <h3 className="text-xl font-bold text-gray-900">{visa.visa_type}</h3>
-        </div>
-        <h4 className="text-lg font-semibold text-gray-700 mb-3">{visa.title}</h4>
-        <p className="text-gray-600 mb-6">{visa.description}</p>
-        
-        <div className="grid md:grid-cols-2 gap-6 mb-6">
-          <div className="bg-blue-50 rounded-lg p-4">
-            <h5 className="font-semibold text-blue-800 mb-3">💰 Cost & Timing</h5>
-            <div className="space-y-2 text-sm">
-              <div><strong>Fee:</strong> {visa.fee}</div>
-              <div><strong>Processing:</strong> {visa.processing_time}</div>
-            </div>
-          </div>
-          
-          <div className="bg-green-50 rounded-lg p-4">
-            <h5 className="font-semibold text-green-800 mb-3">✅ Key Requirements</h5>
-            <ul className="text-sm space-y-1">
-              {visa.eligibility.slice(0, 3).map((requirement, idx) => (
-                <li key={idx} className="flex items-start">
-                  <span className="w-2 h-2 bg-green-500 rounded-full mr-2 mt-1.5"></span>
-                  {requirement}
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-        
-        <div className="border-t pt-4">
-          <h5 className="font-semibold text-gray-700 mb-3">📋 Application Process</h5>
-          <div className="grid md:grid-cols-2 gap-4">
-            <div>
-              <h6 className="text-sm font-medium text-gray-600 mb-2">Steps:</h6>
-              <ol className="text-sm space-y-1">
-                {visa.application_process.slice(0, 4).map((step, idx) => (
-                  <li key={idx} className="flex items-start">
-                    <span className="w-5 h-5 bg-gray-200 text-gray-600 rounded-full mr-2 mt-0.5 text-xs flex items-center justify-center">
-                      {idx + 1}
-                    </span>
-                    {step}
-                  </li>
-                ))}
-              </ol>
-            </div>
-            <div>
-              <h6 className="text-sm font-medium text-gray-600 mb-2">Required Documents:</h6>
-              <ul className="text-sm space-y-1">
-                {visa.required_documents.slice(0, 4).map((doc, idx) => (
-                  <li key={idx} className="flex items-start">
-                    <span className="w-2 h-2 bg-blue-500 rounded-full mr-2 mt-1.5"></span>
-                    {doc}
-                  </li>
-                ))}
-                {visa.required_documents.length > 4 && (
-                  <li className="text-gray-500 text-xs">+{visa.required_documents.length - 4} more documents</li>
-                )}
-              </ul>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div 
-        className="relative bg-cover bg-center h-48 flex items-center justify-center text-white"
-        style={{
-          backgroundImage: "linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('https://images.pexels.com/photos/8830672/pexels-photo-8830672.jpeg')"
-        }}
-      >
-        <div className="text-center">
-          <h1 className="text-4xl font-bold mb-2">Visa & Legal Requirements</h1>
-          <p className="text-lg">Navigate UK immigration requirements</p>
-        </div>
-      </div>
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Visa Types Overview */}
-        <div className="mb-12">
-          <h2 className="text-3xl font-bold text-gray-900 mb-6">Choose Your Visa Type</h2>
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <div className="bg-gradient-to-br from-blue-500 to-blue-600 text-white p-6 rounded-xl shadow-lg">
-              <div className="text-center">
-                <div className="text-4xl mb-3">💼</div>
-                <h3 className="text-lg font-semibold mb-2">Skilled Worker</h3>
-                <p className="text-sm opacity-90">Most common for professionals</p>
-              </div>
-            </div>
-            
-            <div className="bg-gradient-to-br from-green-500 to-green-600 text-white p-6 rounded-xl shadow-lg">
-              <div className="text-center">
-                <div className="text-4xl mb-3">👨‍👩‍👧‍👦</div>
-                <h3 className="text-lg font-semibold mb-2">Family Visa</h3>
-                <p className="text-sm opacity-90">Join family members in UK</p>
-              </div>
-            </div>
-            
-            <div className="bg-gradient-to-br from-purple-500 to-purple-600 text-white p-6 rounded-xl shadow-lg">
-              <div className="text-center">
-                <div className="text-4xl mb-3">🎓</div>
-                <h3 className="text-lg font-semibold mb-2">Student Visa</h3>
-                <p className="text-sm opacity-90">Study at UK institutions</p>
-              </div>
-            </div>
-            
-            <div className="bg-gradient-to-br from-red-500 to-red-600 text-white p-6 rounded-xl shadow-lg">
-              <div className="text-center">
-                <div className="text-4xl mb-3">✈️</div>
-                <h3 className="text-lg font-semibold mb-2">Visitor Visa</h3>
-                <p className="text-sm opacity-90">Short-term visits</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Detailed Visa Requirements */}
-        {visaRequirements && (
-          <div className="mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-6">Detailed Visa Information</h2>
-            {visaRequirements.visa_types.map((visa, index) => (
-              <VisaTypeCard key={visa.visa_type} visa={visa} index={index} />
-            ))}
-          </div>
-        )}
-
-        {/* Document Checklist */}
-        {checklist && (
-          <div className="mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-6">Document Checklist</h2>
-            <div className="grid md:grid-cols-2 gap-6">
-              {Object.entries(checklist).map(([category, documents], index) => {
-                const colors = [
-                  "border-blue-500 bg-blue-50",
-                  "border-green-500 bg-green-50",
-                  "border-purple-500 bg-purple-50",
-                  "border-red-500 bg-red-50"
-                ];
-                
-                return (
-                  <div key={category} className={`bg-white rounded-xl shadow-lg p-6 border-l-4 ${colors[index % colors.length]}`}>
-                    <h3 className="text-lg font-bold text-gray-900 mb-4 capitalize">
-                      {category.replace('_', ' ')}
-                    </h3>
-                    <ul className="space-y-3">
-                      {documents.map((doc, idx) => (
-                        <li key={idx} className="flex items-start">
-                          <input
-                            type="checkbox"
-                            className="mr-3 mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                          />
-                          <span className="text-gray-700 text-sm">{doc}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* Official Resources */}
-        <div>
-          <h2 className="text-3xl font-bold text-gray-900 mb-6">Official Resources</h2>
-          <div className="grid md:grid-cols-2 gap-6">
-            <a href="https://www.gov.uk/browse/visas-immigration" target="_blank" rel="noopener noreferrer" className="bg-gradient-to-br from-red-500 to-red-600 text-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-              <div className="text-center">
-                <div className="text-4xl mb-3">🏛️</div>
-                <h3 className="text-lg font-semibold mb-2">UK Government</h3>
-                <p className="text-sm opacity-90">Official visa information</p>
-              </div>
-            </a>
-            
-            <a href="https://www.lawsociety.org.uk" target="_blank" rel="noopener noreferrer" className="bg-gradient-to-br from-yellow-500 to-yellow-600 text-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-              <div className="text-center">
-                <div className="text-4xl mb-3">⚖️</div>
-                <h3 className="text-lg font-semibold mb-2">Legal Society</h3>
-                <p className="text-sm opacity-90">Find qualified lawyers</p>
-              </div>
-            </a>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// Logistics Page Component
-const LogisticsPage = () => {
-  const [logisticsData, setLogisticsData] = useState(null);
-  const [checklist, setChecklist] = useState(null);
-  const [costCalculator, setCostCalculator] = useState(null);
-  const [selectedServiceType, setSelectedServiceType] = useState("all");
-  const [loadingLogistics, setLoadingLogistics] = useState(true);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [providersRes, checklistRes, calculatorRes] = await Promise.all([
-          axios.get(`${API}/logistics/providers`),
-          axios.get(`${API}/logistics/checklist`),
-          axios.get(`${API}/logistics/cost-calculator`)
-        ]);
-        setLogisticsData(providersRes.data);
-        setChecklist(checklistRes.data);
-        setCostCalculator(calculatorRes.data);
-      } catch (error) {
-        console.error("Error fetching logistics data:", error);
-      } finally {
-        setLoadingLogistics(false);
-      }
-    };
-    fetchData();
-  }, []);
-
-  const filteredProviders = logisticsData?.providers.filter(provider => 
-    selectedServiceType === "all" || provider.service_type === selectedServiceType
-  ) || [];
-
-  const ProviderCard = ({ provider }) => {
-    const serviceTypeColors = {
-      "full_service": "from-blue-500 to-blue-600",
-      "container": "from-green-500 to-green-600",
-      "air_freight": "from-purple-500 to-purple-600",
-      "storage": "from-orange-500 to-orange-600"
-    };
-
-    return (
-      <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-blue-500">
-        <div className="flex justify-between items-start mb-4">
-          <div className="flex-1">
-            <h3 className="text-xl font-bold text-gray-900 mb-2">{provider.company_name}</h3>
-            <div className="flex items-center mb-2">
-              <span className={`px-3 py-1 text-xs rounded-full bg-gradient-to-r ${serviceTypeColors[provider.service_type]} text-white`}>
-                {provider.service_type.replace('_', ' ').toUpperCase()}
-              </span>
-              <span className="ml-3 text-sm text-gray-600">Coverage: {provider.coverage_area}</span>
-            </div>
-            <div className="flex items-center mb-3">
-              <span className="text-green-600 font-semibold mr-4">💰 {provider.price_range}</span>
-              <span className="text-blue-600 font-semibold">⏱️ {provider.transit_time}</span>
-            </div>
-          </div>
-          <div className="text-right">
-            <div className="flex items-center mb-1">
-              <span className="text-yellow-500">⭐</span>
-              <span className="ml-1 font-semibold">{provider.rating}</span>
-              <span className="ml-1 text-sm text-gray-500">({provider.reviews_count})</span>
-            </div>
-          </div>
-        </div>
-        
-        <p className="text-gray-600 mb-4">{provider.description}</p>
-        
-        <div className="mb-4">
-          <h4 className="text-sm font-medium text-gray-700 mb-2">Features:</h4>
-          <div className="grid md:grid-cols-2 gap-2">
-            {provider.features.map((feature, index) => (
-              <div key={index} className="flex items-center text-sm text-gray-600">
-                <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
-                {feature}
-              </div>
-            ))}
-          </div>
-        </div>
-        
-        <div className="border-t pt-4">
-          <div className="flex justify-between items-center">
-            <div className="text-sm text-gray-600">
-              <div>📞 {provider.contact_info.phone}</div>
-              <div>📧 {provider.contact_info.email}</div>
-            </div>
-            <a
-              href={provider.contact_info.website}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition duration-300 text-sm"
-            >
-              Get Quote →
-            </a>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  if (loadingLogistics) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading logistics information...</p>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div 
-        className="relative bg-cover bg-center h-48 flex items-center justify-center text-white"
-        style={{
-          backgroundImage: "linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('https://images.unsplash.com/photo-1566228015668-4c45dbc4e2f5')"
-        }}
-      >
-        <div className="text-center">
-          <h1 className="text-4xl font-bold mb-2">Moving & Logistics</h1>
-          <p className="text-lg">Professional moving services for your relocation</p>
-        </div>
-      </div>
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Cost Calculator Overview */}
-        {costCalculator && (
-          <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">Moving Cost Overview</h2>
-            <div className="grid md:grid-cols-4 gap-6 mb-6">
-              {Object.entries(costCalculator.base_costs).map(([type, costs]) => (
-                <div key={type} className="text-center">
-                  <h3 className="text-lg font-semibold text-gray-700 mb-2 capitalize">
-                    {type.replace('_', ' ')}
-                  </h3>
-                  <div className="text-2xl font-bold text-green-600 mb-1">
-                    ${costs.average.toLocaleString()}
-                  </div>
-                  <div className="text-sm text-gray-500">
-                    ${costs.min.toLocaleString()} - ${costs.max.toLocaleString()}
-                  </div>
-                </div>
-              ))}
-            </div>
-            
-            <div className="border-t pt-4">
-              <h3 className="text-lg font-semibold text-gray-700 mb-3">Additional Cost Considerations</h3>
-              <div className="grid md:grid-cols-3 gap-4">
-                {Object.entries(costCalculator.additional_costs).slice(0, 3).map(([type, info]) => (
-                  <div key={type} className="bg-gray-50 rounded-lg p-3">
-                    <h4 className="font-medium text-gray-800 mb-1 capitalize">
-                      {type.replace('_', ' ')}
-                    </h4>
-                    <p className="text-sm text-gray-600">{info.description}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Moving Companies */}
-        {logisticsData && (
-          <div className="mb-8">
-            <div className="flex flex-col md:flex-row md:items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4 md:mb-0">
-                Moving Companies ({filteredProviders.length})
-              </h2>
-              <select
-                value={selectedServiceType}
-                onChange={(e) => setSelectedServiceType(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="all">All Service Types</option>
-                {logisticsData.service_types.map(type => (
-                  <option key={type} value={type}>
-                    {type.replace('_', ' ').toUpperCase()}
-                  </option>
-                ))}
-              </select>
-            </div>
-            
-            <div className="grid gap-6">
-              {filteredProviders.map((provider, index) => (
-                <ProviderCard key={provider.id || index} provider={provider} />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Moving Timeline Checklist */}
-        {checklist && (
-          <div className="bg-white rounded-xl shadow-lg p-6">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">Moving Timeline Checklist</h2>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {Object.entries(checklist).map(([timeframe, tasks], index) => {
-                const colors = [
-                  "border-red-500 bg-red-50",
-                  "border-orange-500 bg-orange-50",
-                  "border-yellow-500 bg-yellow-50",
-                  "border-green-500 bg-green-50",
-                  "border-blue-500 bg-blue-50",
-                  "border-purple-500 bg-purple-50"
-                ];
-                
-                return (
-                  <div key={timeframe} className={`rounded-xl p-4 border-l-4 ${colors[index % colors.length]}`}>
-                    <h3 className="text-lg font-bold text-gray-900 mb-3 capitalize">
-                      {timeframe.replace('_', ' ')}
-                    </h3>
-                    <ul className="space-y-2">
-                      {tasks.map((task, idx) => (
-                        <li key={idx} className="flex items-start text-sm text-gray-700">
-                          <input
-                            type="checkbox"
-                            className="mr-2 mt-0.5 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                          />
-                          {task}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
-// Analytics Page Component
-const AnalyticsPage = () => {
-  const [analyticsData, setAnalyticsData] = useState(null);
-  const [progressHistory, setProgressHistory] = useState(null);
-  const [costTracking, setCostTracking] = useState(null);
-  const [loadingAnalytics, setLoadingAnalytics] = useState(true);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [overviewRes, historyRes, costRes] = await Promise.all([
-          axios.get(`${API}/analytics/overview`),
-          axios.get(`${API}/analytics/progress-history`),
-          axios.get(`${API}/analytics/cost-tracking`)
-        ]);
-        setAnalyticsData(overviewRes.data);
-        setProgressHistory(historyRes.data);
-        setCostTracking(costRes.data);
-      } catch (error) {
-        console.error("Error fetching analytics data:", error);
-      } finally {
-        setLoadingAnalytics(false);
-      }
-    };
-    fetchData();
-  }, []);
-
-  const ProgressChart = ({ data }) => (
-    <div className="bg-white rounded-xl shadow-lg p-6">
-      <h3 className="text-lg font-bold text-gray-900 mb-4">Progress Over Time</h3>
-      <div className="space-y-4">
-        {data.map((point, index) => (
-          <div key={index} className="flex items-center">
-            <div className="w-16 text-sm text-gray-600">{point.date.split('-')[1]}/{point.date.split('-')[2]}</div>
-            <div className="flex-1 mx-4">
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div
-                  className="bg-gradient-to-r from-blue-500 to-green-500 h-2 rounded-full transition-all duration-500"
-                  style={{ width: `${point.completion_percentage}%` }}
-                ></div>
-              </div>
-            </div>
-            <div className="w-12 text-sm font-semibold text-gray-900">
-              {point.completion_percentage.toFixed(1)}%
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-
-  const CostBreakdownChart = ({ costs }) => (
-    <div className="bg-white rounded-xl shadow-lg p-6">
-      <h3 className="text-lg font-bold text-gray-900 mb-4">Estimated Cost Breakdown</h3>
-      <div className="space-y-3">
-        {Object.entries(costs).map(([category, amount], index) => {
-          const total = Object.values(costs).reduce((sum, val) => sum + val, 0);
-          const percentage = (amount / total) * 100;
-          const colors = [
-            "bg-blue-500", "bg-green-500", "bg-purple-500", 
-            "bg-red-500", "bg-yellow-500", "bg-indigo-500"
-          ];
-          
-          return (
-            <div key={category} className="flex items-center">
-              <div className="w-32 text-sm text-gray-700 capitalize">
-                {category.replace('_', ' ')}
-              </div>
-              <div className="flex-1 mx-4">
-                <div className="w-full bg-gray-200 rounded-full h-3">
-                  <div
-                    className={`${colors[index % colors.length]} h-3 rounded-full transition-all duration-500`}
-                    style={{ width: `${percentage}%` }}
-                  ></div>
-                </div>
-              </div>
-              <div className="w-20 text-sm font-semibold text-gray-900 text-right">
-                ${amount.toLocaleString()}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-
-  if (loadingAnalytics) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading analytics...</p>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div 
-        className="relative bg-cover bg-center h-48 flex items-center justify-center text-white"
-        style={{
-          backgroundImage: "linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('https://images.unsplash.com/photo-1551288049-bebda4e38f71')"
-        }}
-      >
-        <div className="text-center">
-          <h1 className="text-4xl font-bold mb-2">Relocation Analytics</h1>
-          <p className="text-lg">Track your progress and insights</p>
-        </div>
-      </div>
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Key Metrics */}
-        {analyticsData && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-blue-500">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Overall Progress</p>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {analyticsData.user_progress.overall_completion.toFixed(1)}%
-                  </p>
-                  <p className="text-sm text-blue-600 mt-1">
-                    {analyticsData.user_progress.completed_steps}/{analyticsData.user_progress.total_steps} steps
-                  </p>
-                </div>
-                <div className="text-3xl">📊</div>
-              </div>
-            </div>
-            
-            <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-green-500">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Current Phase</p>
-                  <p className="text-lg font-bold text-gray-900">{analyticsData.user_progress.current_phase}</p>
-                  <p className="text-sm text-green-600 mt-1">Active stage</p>
-                </div>
-                <div className="text-3xl">🚀</div>
-              </div>
-            </div>
-            
-            <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-purple-500">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Days Active</p>
-                  <p className="text-2xl font-bold text-gray-900">{analyticsData.timeline_insights.days_active}</p>
-                  <p className="text-sm text-purple-600 mt-1">Since you started</p>
-                </div>
-                <div className="text-3xl">📅</div>
-              </div>
-            </div>
-            
-            <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-orange-500">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">On Track</p>
-                  <p className="text-lg font-bold text-gray-900">
-                    {analyticsData.timeline_insights.on_track ? "Yes" : "Behind"}
-                  </p>
-                  <p className="text-sm text-orange-600 mt-1">
-                    {analyticsData.timeline_insights.projected_completion}
-                  </p>
-                </div>
-                <div className="text-3xl">
-                  {analyticsData.timeline_insights.on_track ? "✅" : "⚠️"}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Charts Section */}
-        <div className="grid md:grid-cols-2 gap-8 mb-8">
-          {progressHistory && (
-            <ProgressChart data={progressHistory.progress_history} />
-          )}
-          
-          {analyticsData && (
-            <CostBreakdownChart costs={analyticsData.cost_breakdown} />
-          )}
-        </div>
-
-        {/* Category Progress */}
-        {analyticsData && (
-          <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">Progress by Category</h2>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {Object.entries(analyticsData.user_progress.category_breakdown).map(([category, progress], index) => {
-                const colors = [
-                  "from-blue-500 to-blue-600",
-                  "from-green-500 to-green-600", 
-                  "from-purple-500 to-purple-600",
-                  "from-red-500 to-red-600",
-                  "from-yellow-500 to-yellow-600",
-                  "from-indigo-500 to-indigo-600",
-                  "from-pink-500 to-pink-600",
-                  "from-teal-500 to-teal-600",
-                  "from-orange-500 to-orange-600"
-                ];
-                
-                const completionPercentage = progress.total > 0 ? (progress.completed / progress.total) * 100 : 0;
-                
-                return (
-                  <div key={category} className={`bg-gradient-to-br ${colors[index % colors.length]} text-white p-6 rounded-xl shadow-lg`}>
-                    <h3 className="text-lg font-bold mb-4">{category}</h3>
+                  <p className="text-gray-600 mb-4 leading-relaxed">{step.description}</p>
+                  
+                  {step.required_documents && step.required_documents.length > 0 && (
                     <div className="mb-4">
-                      <div className="flex justify-between text-sm mb-2">
-                        <span>{progress.completed}/{progress.total} completed</span>
-                        <span>{completionPercentage.toFixed(0)}%</span>
-                      </div>
-                      <div className="w-full bg-white bg-opacity-30 rounded-full h-2">
-                        <div
-                          className="bg-white h-2 rounded-full transition-all duration-500"
-                          style={{ width: `${completionPercentage}%` }}
-                        ></div>
-                      </div>
+                      <h4 className="font-semibold text-gray-900 mb-2">📋 Required Documents:</h4>
+                      <ul className="list-disc list-inside text-gray-600 space-y-1">
+                        {step.required_documents.map((doc, idx) => (
+                          <li key={idx}>{doc}</li>
+                        ))}
+                      </ul>
                     </div>
+                  )}
+                  
+                  {step.estimated_cost && (
+                    <div className="flex items-center text-sm text-gray-500 mb-2">
+                      <span className="mr-4">💰 Estimated Cost: {step.estimated_cost}</span>
+                      <span>⏱️ Duration: {step.estimated_duration}</span>
+                    </div>
+                  )}
+                </div>
+                
+                {step.is_completed && (
+                  <div className="ml-4 text-green-500 text-2xl">
+                    ✅
                   </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* Upcoming Deadlines & Popular Resources */}
-        {analyticsData && (
-          <div className="grid md:grid-cols-2 gap-8">
-            <div className="bg-white rounded-xl shadow-lg p-6">
-              <h3 className="text-lg font-bold text-gray-900 mb-4">Upcoming Deadlines</h3>
-              <div className="space-y-4">
-                {analyticsData.upcoming_deadlines.map((deadline, index) => (
-                  <div key={index} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                    <div>
-                      <div className="font-medium text-gray-900">{deadline.task}</div>
-                      <div className="text-sm text-gray-600">{deadline.days_left} days left</div>
-                    </div>
-                    <div className={`px-3 py-1 rounded-full text-sm ${
-                      deadline.days_left < 30 ? 'bg-red-100 text-red-800' :
-                      deadline.days_left < 60 ? 'bg-yellow-100 text-yellow-800' :
-                      'bg-green-100 text-green-800'
-                    }`}>
-                      {deadline.days_left < 30 ? 'Urgent' : 
-                       deadline.days_left < 60 ? 'Soon' : 'Planned'}
-                    </div>
-                  </div>
-                ))}
+                )}
               </div>
             </div>
+          ))}
+        </div>
 
-            <div className="bg-white rounded-xl shadow-lg p-6">
-              <h3 className="text-lg font-bold text-gray-900 mb-4">Popular Resources</h3>
-              <div className="space-y-4">
-                {analyticsData.popular_resources.map((resource, index) => (
-                  <div key={index} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                    <div>
-                      <div className="font-medium text-gray-900">{resource.name}</div>
-                      <div className="text-sm text-gray-600">{resource.category}</div>
-                    </div>
-                    <div className="text-blue-600 font-semibold">
-                      {resource.clicks} clicks
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+        {filteredSteps.length === 0 && (
+          <div className="text-center py-12">
+            <p className="text-gray-500 text-lg">No steps found for this category.</p>
           </div>
         )}
       </div>
@@ -1933,431 +466,234 @@ const AnalyticsPage = () => {
   );
 };
 
+// Enhanced Progress Page with Interactive Checklist
 const ProgressPage = () => {
-  const [progressData, setProgressData] = useState(null);
   const [progressItems, setProgressItems] = useState([]);
-  const [filteredItems, setFilteredItems] = useState([]);
-  const [selectedCategory, setSelectedCategory] = useState("all");
-  const [selectedStatus, setSelectedStatus] = useState("all");
-  const [loadingProgress, setLoadingProgress] = useState(true);
-  const [updatingItem, setUpdatingItem] = useState(null);
+  const [editingNotes, setEditingNotes] = useState(null);
+  const [tempNote, setTempNote] = useState('');
 
   useEffect(() => {
-    fetchProgressData();
+    fetchProgressItems();
   }, []);
 
-  useEffect(() => {
-    filterItems();
-  }, [progressItems, selectedCategory, selectedStatus]);
-
-  const fetchProgressData = async () => {
+  const fetchProgressItems = async () => {
     try {
-      const [dashboardRes, itemsRes] = await Promise.all([
-        axios.get(`${API}/progress/dashboard`),
-        axios.get(`${API}/progress/items`)
-      ]);
-      setProgressData(dashboardRes.data);
-      setProgressItems(itemsRes.data.items);
+      const response = await axios.get(`${API}/progress/items`);
+      setProgressItems(response.data.items);
     } catch (error) {
-      console.error("Error fetching progress data:", error);
-    } finally {
-      setLoadingProgress(false);
+      console.error('Error fetching progress items:', error);
     }
-  };
-
-  const filterItems = () => {
-    let filtered = progressItems;
-    
-    if (selectedCategory !== "all") {
-      filtered = filtered.filter(item => item.category === selectedCategory);
-    }
-    
-    if (selectedStatus !== "all") {
-      filtered = filtered.filter(item => item.status === selectedStatus);
-    }
-    
-    setFilteredItems(filtered);
   };
 
   const updateItemStatus = async (itemId, newStatus) => {
-    setUpdatingItem(itemId);
     try {
-      await axios.put(`${API}/progress/items/${itemId}`, { status: newStatus });
-      
-      // Update local state
-      setProgressItems(prevItems =>
-        prevItems.map(item =>
-          item.id === itemId ? { ...item, status: newStatus } : item
-        )
-      );
-      
-      // Refresh dashboard data
-      const dashboardRes = await axios.get(`${API}/progress/dashboard`);
-      setProgressData(dashboardRes.data);
+      await axios.put(`${API}/progress/items/${itemId}`, {
+        status: newStatus
+      });
+      fetchProgressItems();
     } catch (error) {
-      console.error("Error updating item status:", error);
-    } finally {
-      setUpdatingItem(null);
-    }
-  };
-
-  const updateItemNotes = async (itemId, notes) => {
-    try {
-      await axios.put(`${API}/progress/items/${itemId}`, { notes });
-      
-      // Update local state
-      setProgressItems(prevItems =>
-        prevItems.map(item =>
-          item.id === itemId ? { ...item, notes } : item
-        )
-      );
-    } catch (error) {
-      console.error("Error updating item notes:", error);
+      console.error('Error updating item status:', error);
     }
   };
 
   const toggleSubtask = async (itemId, subtaskIndex) => {
     try {
-      const response = await axios.post(`${API}/progress/items/${itemId}/subtask?subtask_index=${subtaskIndex}`);
-      
-      // Update local state
-      setProgressItems(prevItems =>
-        prevItems.map(item =>
-          item.id === itemId ? { ...item, subtasks: response.data.subtasks } : item
-        )
-      );
+      await axios.post(`${API}/progress/items/${itemId}/subtasks/${subtaskIndex}/toggle`);
+      fetchProgressItems();
     } catch (error) {
-      console.error("Error toggling subtask:", error);
+      console.error('Error toggling subtask:', error);
     }
+  };
+
+  const saveNotes = async (itemId, notes) => {
+    try {
+      await axios.put(`${API}/progress/items/${itemId}`, {
+        notes: notes
+      });
+      setEditingNotes(null);
+      setTempNote('');
+      fetchProgressItems();
+    } catch (error) {
+      console.error('Error saving notes:', error);
+    }
+  };
+
+  const startEditingNotes = (item) => {
+    setEditingNotes(item.id);
+    setTempNote(item.notes || '');
   };
 
   const getStatusColor = (status) => {
     switch (status) {
-      case "completed": return "bg-green-100 text-green-800 border-green-500";
-      case "in_progress": return "bg-blue-100 text-blue-800 border-blue-500";
-      case "blocked": return "bg-red-100 text-red-800 border-red-500";
-      default: return "bg-gray-100 text-gray-800 border-gray-300";
+      case 'completed': return 'bg-green-100 text-green-800';
+      case 'in_progress': return 'bg-yellow-100 text-yellow-800';
+      case 'blocked': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
     }
   };
 
-  const getPriorityColor = (priority) => {
-    switch (priority) {
-      case "urgent": return "bg-red-500";
-      case "high": return "bg-orange-500";
-      case "medium": return "bg-yellow-500";
-      case "low": return "bg-green-500";
-      default: return "bg-gray-500";
+  const getStatusIcon = (status) => {
+    switch (status) {
+      case 'completed': return '✅';
+      case 'in_progress': return '🔄';
+      case 'blocked': return '🚫';
+      default: return '⏳';
     }
   };
 
-  const ProgressItemCard = ({ item }) => {
-    const [showNotes, setShowNotes] = useState(false);
-    const [editingNotes, setEditingNotes] = useState(false);
-    const [notesText, setNotesText] = useState(item.notes || "");
-
-    const handleNotesSubmit = () => {
-      updateItemNotes(item.id, notesText);
-      setEditingNotes(false);
-    };
-
-    const formatDate = (dateString) => {
-      if (!dateString) return "No due date";
-      const date = new Date(dateString);
-      return date.toLocaleDateString();
-    };
-
-    const completedSubtasks = item.subtasks?.filter(st => st.completed).length || 0;
-    const totalSubtasks = item.subtasks?.length || 0;
-
-    return (
-      <div className={`bg-white rounded-xl shadow-lg p-6 border-l-4 ${getStatusColor(item.status)} transition-all duration-300 hover:shadow-xl`}>
-        <div className="flex justify-between items-start mb-4">
-          <div className="flex-1">
-            <div className="flex items-center mb-2">
-              <h3 className="text-lg font-semibold text-gray-900 mr-3">{item.title}</h3>
-              <div className={`w-3 h-3 rounded-full ${getPriorityColor(item.priority)} mr-2`}></div>
-              <span className="text-xs text-gray-500 capitalize">{item.priority}</span>
-            </div>
-            <p className="text-gray-600 text-sm mb-3">{item.description}</p>
-            <div className="flex items-center text-sm text-gray-500 mb-3">
-              <span className="mr-4">📅 Due: {formatDate(item.due_date)}</span>
-              <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">
-                {item.category}
-              </span>
-            </div>
-          </div>
-          
-          <div className="flex flex-col items-end space-y-2">
-            <select
-              value={item.status}
-              onChange={(e) => updateItemStatus(item.id, e.target.value)}
-              disabled={updatingItem === item.id}
-              className="text-sm border border-gray-300 rounded px-2 py-1 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="not_started">Not Started</option>
-              <option value="in_progress">In Progress</option>
-              <option value="completed">Completed</option>
-              <option value="blocked">Blocked</option>
-            </select>
-            
-            {updatingItem === item.id && (
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-            )}
-          </div>
-        </div>
-
-        {/* Subtasks */}
-        {item.subtasks && item.subtasks.length > 0 && (
-          <div className="mb-4">
-            <div className="flex justify-between items-center mb-2">
-              <h4 className="text-sm font-medium text-gray-700">
-                Subtasks ({completedSubtasks}/{totalSubtasks})
-              </h4>
-              <div className="w-24 bg-gray-200 rounded-full h-2">
-                <div
-                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                  style={{ width: `${totalSubtasks > 0 ? (completedSubtasks / totalSubtasks) * 100 : 0}%` }}
-                ></div>
-              </div>
-            </div>
-            <div className="space-y-2">
-              {item.subtasks.map((subtask, index) => (
-                <label key={index} className="flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={subtask.completed}
-                    onChange={() => toggleSubtask(item.id, index)}
-                    className="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                  />
-                  <span className={`text-sm ${subtask.completed ? 'line-through text-gray-500' : 'text-gray-700'}`}>
-                    {subtask.task}
-                  </span>
-                </label>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Notes Section */}
-        <div className="border-t pt-4">
-          <div className="flex justify-between items-center mb-2">
-            <h4 className="text-sm font-medium text-gray-700">Notes</h4>
-            <button
-              onClick={() => setShowNotes(!showNotes)}
-              className="text-blue-600 hover:text-blue-800 text-sm"
-            >
-              {showNotes ? "Hide" : "Show"}
-            </button>
-          </div>
-          
-          {showNotes && (
-            <div className="mt-2">
-              {editingNotes ? (
-                <div>
-                  <textarea
-                    value={notesText}
-                    onChange={(e) => setNotesText(e.target.value)}
-                    className="w-full p-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    rows="3"
-                    placeholder="Add your notes here..."
-                  />
-                  <div className="flex justify-end space-x-2 mt-2">
-                    <button
-                      onClick={() => setEditingNotes(false)}
-                      className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={handleNotesSubmit}
-                      className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
-                    >
-                      Save
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div>
-                  <p className="text-sm text-gray-600 mb-2">
-                    {item.notes || "No notes added yet."}
-                  </p>
-                  <button
-                    onClick={() => setEditingNotes(true)}
-                    className="text-blue-600 hover:text-blue-800 text-sm"
-                  >
-                    Edit Notes
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  };
-
-  if (loadingProgress) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading progress data...</p>
-        </div>
-      </div>
-    );
-  }
-
-  const categories = progressItems.length > 0 ? [...new Set(progressItems.map(item => item.category))] : [];
+  const completedItems = progressItems.filter(item => item.status === 'completed').length;
+  const totalItems = progressItems.length;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div 
-        className="relative bg-cover bg-center h-48 flex items-center justify-center text-white"
-        style={{
-          backgroundImage: "linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('https://images.pexels.com/photos/7948029/pexels-photo-7948029.jpeg')"
-        }}
-      >
-        <div className="text-center">
-          <h1 className="text-4xl font-bold mb-2">Progress Tracking</h1>
-          <p className="text-lg">Monitor and manage your relocation journey</p>
-        </div>
-      </div>
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Dashboard Overview */}
-        {progressData && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-blue-500">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Total Items</p>
-                  <p className="text-2xl font-bold text-gray-900">{progressData.overview.total_items}</p>
-                  <p className="text-sm text-blue-600 mt-1">All tasks</p>
-                </div>
-                <div className="text-3xl">📋</div>
-              </div>
-            </div>
-            
-            <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-green-500">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Completed</p>
-                  <p className="text-2xl font-bold text-gray-900">{progressData.overview.completed_items}</p>
-                  <p className="text-sm text-green-600 mt-1">
-                    {progressData.overview.overall_completion.toFixed(1)}% done
-                  </p>
-                </div>
-                <div className="text-3xl">✅</div>
-              </div>
-            </div>
-            
-            <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-yellow-500">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">In Progress</p>
-                  <p className="text-2xl font-bold text-gray-900">{progressData.overview.in_progress_items}</p>
-                  <p className="text-sm text-yellow-600 mt-1">Active tasks</p>
-                </div>
-                <div className="text-3xl">🔄</div>
-              </div>
-            </div>
-            
-            <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-red-500">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Overdue</p>
-                  <p className="text-2xl font-bold text-gray-900">{progressData.overview.overdue_items}</p>
-                  <p className="text-sm text-red-600 mt-1">Need attention</p>
-                </div>
-                <div className="text-3xl">⚠️</div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Filters */}
-        <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
-          <div className="flex flex-col md:flex-row md:items-center justify-between">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4 md:mb-0">
-              Progress Items ({filteredItems.length})
-            </h2>
-            <div className="flex flex-col sm:flex-row gap-4">
-              <select
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="all">All Categories</option>
-                {categories.map(category => (
-                  <option key={category} value={category}>{category}</option>
-                ))}
-              </select>
-              <select
-                value={selectedStatus}
-                onChange={(e) => setSelectedStatus(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="all">All Statuses</option>
-                <option value="not_started">Not Started</option>
-                <option value="in_progress">In Progress</option>
-                <option value="completed">Completed</option>
-                <option value="blocked">Blocked</option>
-              </select>
-            </div>
-          </div>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 p-6">
+      <div className="max-w-6xl mx-auto">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-4">
+            📊 Track Your Progress
+          </h1>
+          <p className="text-xl text-gray-600 mb-6">
+            Interactive checklist to track your relocation tasks and milestones
+          </p>
+          
+          <ProgressWizard 
+            currentStep={completedItems + 1} 
+            totalSteps={totalItems} 
+            completedSteps={completedItems} 
+          />
         </div>
 
         {/* Progress Items */}
-        <div className="grid gap-6">
-          {filteredItems.map((item, index) => (
-            <ProgressItemCard key={item.id || index} item={item} />
+        <div className="space-y-6">
+          {progressItems.map((item, index) => (
+            <div key={item.id} className="bg-white rounded-xl shadow-lg p-6 transition-all duration-300 hover:shadow-xl">
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center space-x-4">
+                  <div className={`w-12 h-12 rounded-full flex items-center justify-center text-xl font-bold text-white ${
+                    item.status === 'completed' ? 'bg-green-500' : 
+                    item.status === 'in_progress' ? 'bg-yellow-500' :
+                    item.status === 'blocked' ? 'bg-red-500' : 'bg-gray-500'
+                  }`}>
+                    {getStatusIcon(item.status)}
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-900">{item.title}</h2>
+                    <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(item.status)}`}>
+                      {item.status.replace('_', ' ').toUpperCase()}
+                    </span>
+                  </div>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <select
+                    value={item.status}
+                    onChange={(e) => updateItemStatus(item.id, e.target.value)}
+                    className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="not_started">Not Started</option>
+                    <option value="in_progress">In Progress</option>
+                    <option value="completed">Completed</option>
+                    <option value="blocked">Blocked</option>
+                  </select>
+                </div>
+              </div>
+
+              <p className="text-gray-600 mb-4">{item.description}</p>
+
+              {/* Progress Bar */}
+              <div className="mb-4">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-sm font-medium text-gray-700">Subtasks Progress</span>
+                  <span className="text-sm text-gray-500">
+                    {item.subtasks.filter(st => st.completed).length}/{item.subtasks.length}
+                  </span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div 
+                    className="bg-gradient-to-r from-blue-500 to-purple-600 h-2 rounded-full transition-all duration-500"
+                    style={{ 
+                      width: `${(item.subtasks.filter(st => st.completed).length / item.subtasks.length) * 100}%` 
+                    }}
+                  ></div>
+                </div>
+              </div>
+
+              {/* Interactive Subtasks */}
+              <div className="space-y-3 mb-6">
+                <h3 className="font-semibold text-gray-900">📋 Task Checklist:</h3>
+                {item.subtasks.map((subtask, index) => (
+                  <label key={index} className="flex items-center cursor-pointer group">
+                    <input
+                      type="checkbox"
+                      checked={subtask.completed}
+                      onChange={() => toggleSubtask(item.id, index)}
+                      className="mr-3 h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded transition-all duration-200"
+                    />
+                    <span className={`text-sm transition-all duration-200 group-hover:text-blue-600 ${
+                      subtask.completed ? 'line-through text-gray-500' : 'text-gray-700'
+                    }`}>
+                      {subtask.task}
+                    </span>
+                    {subtask.completed && (
+                      <span className="ml-2 text-green-500">✅</span>
+                    )}
+                  </label>
+                ))}
+              </div>
+
+              {/* Notes Section */}
+              <div className="border-t pt-4">
+                <h3 className="font-semibold text-gray-900 mb-2">📝 Notes:</h3>
+                {editingNotes === item.id ? (
+                  <div className="space-y-3">
+                    <textarea
+                      value={tempNote}
+                      onChange={(e) => setTempNote(e.target.value)}
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      rows="3"
+                      placeholder="Add your notes here..."
+                    />
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={() => saveNotes(item.id, tempNote)}
+                        className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition duration-300 text-sm font-medium"
+                      >
+                        💾 Save
+                      </button>
+                      <button
+                        onClick={() => {
+                          setEditingNotes(null);
+                          setTempNote('');
+                        }}
+                        className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition duration-300 text-sm font-medium"
+                      >
+                        ❌ Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <p className="text-gray-600 text-sm bg-gray-50 p-3 rounded-lg">
+                      {item.notes || 'No notes added yet. Click "Edit Notes" to add your thoughts and updates.'}
+                    </p>
+                    <button
+                      onClick={() => startEditingNotes(item)}
+                      className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                    >
+                      ✏️ Edit Notes
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
           ))}
         </div>
 
-        {filteredItems.length === 0 && (
-          <div className="text-center py-8">
-            <p className="text-gray-500">No items found matching your criteria.</p>
-          </div>
-        )}
-
-        {/* Category Breakdown */}
-        {progressData && (
-          <div className="mt-12 bg-white rounded-xl shadow-lg p-6">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">Progress by Category</h2>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {Object.entries(progressData.category_breakdown).map(([category, stats], index) => {
-                const colors = [
-                  "from-blue-500 to-blue-600",
-                  "from-green-500 to-green-600", 
-                  "from-purple-500 to-purple-600",
-                  "from-red-500 to-red-600",
-                  "from-yellow-500 to-yellow-600",
-                  "from-indigo-500 to-indigo-600"
-                ];
-                
-                return (
-                  <div key={category} className={`bg-gradient-to-br ${colors[index % colors.length]} text-white p-6 rounded-xl shadow-lg`}>
-                    <h3 className="text-lg font-bold mb-4">{category}</h3>
-                    <div className="mb-4">
-                      <div className="flex justify-between text-sm mb-2">
-                        <span>{stats.completed}/{stats.total} completed</span>
-                        <span>{stats.completion_percentage.toFixed(0)}%</span>
-                      </div>
-                      <div className="w-full bg-white bg-opacity-30 rounded-full h-2">
-                        <div
-                          className="bg-white h-2 rounded-full transition-all duration-500"
-                          style={{ width: `${stats.completion_percentage}%` }}
-                        ></div>
-                      </div>
-                    </div>
-                    <p className="text-sm opacity-90">
-                      {stats.in_progress} in progress
-                    </p>
-                  </div>
-                );
-              })}
-            </div>
+        {progressItems.length === 0 && (
+          <div className="text-center py-12">
+            <div className="text-6xl mb-4">📋</div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">No Progress Items Yet</h2>
+            <p className="text-gray-600">Start by completing steps in your timeline to see progress items here.</p>
           </div>
         )}
       </div>
@@ -2365,96 +701,247 @@ const ProgressPage = () => {
   );
 };
 
-// Main App component
-function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [user, setUser] = useState("");
-  const [loading, setLoading] = useState(true);
+// Visa & Legal Page with Interactive Document Checklist
+const VisaPage = () => {
+  const [visaRequirements, setVisaRequirements] = useState({ visa_types: [] });
+  const [selectedVisa, setSelectedVisa] = useState(null);
+  const [documentChecklist, setDocumentChecklist] = useState({});
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      axios.get(`${API}/auth/me`)
-        .then(response => {
-          setIsAuthenticated(true);
-          setUser(response.data.username);
-        })
-        .catch(() => {
-          localStorage.removeItem("token");
-          delete axios.defaults.headers.common['Authorization'];
-        })
-        .finally(() => {
-          setLoading(false);
-        });
-    } else {
-      setLoading(false);
-    }
+    const fetchVisaData = async () => {
+      try {
+        const response = await axios.get(`${API}/visa/requirements`);
+        setVisaRequirements(response.data);
+        if (response.data.visa_types.length > 0) {
+          setSelectedVisa(response.data.visa_types[0]);
+        }
+      } catch (error) {
+        console.error('Error fetching visa data:', error);
+      }
+    };
+    fetchVisaData();
   }, []);
 
-  const handleLogin = (token) => {
-    setIsAuthenticated(true);
-    axios.get(`${API}/auth/me`)
-      .then(response => {
-        setUser(response.data.username);
-      })
-      .catch(console.error);
+  const toggleDocument = (category, docIndex) => {
+    const key = `${category}_${docIndex}`;
+    setDocumentChecklist(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    delete axios.defaults.headers.common['Authorization'];
-    setIsAuthenticated(false);
-    setUser("");
+  const getDocumentProgress = () => {
+    const checkedDocs = Object.values(documentChecklist).filter(Boolean).length;
+    const totalDocs = Object.keys(documentChecklist).length;
+    return { checked: checkedDocs, total: totalDocs };
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
-        </div>
-      </div>
-    );
+  if (!selectedVisa) {
+    return <div className="flex justify-center items-center min-h-screen">
+      <div className="text-xl">Loading visa information...</div>
+    </div>;
   }
 
+  const progress = getDocumentProgress();
+  const progressPercentage = progress.total > 0 ? (progress.checked / progress.total) * 100 : 0;
+
   return (
-    <div className="App">
-      <BrowserRouter>
-        {isAuthenticated ? (
-          <AuthenticatedApp user={user} onLogout={handleLogout} />
-        ) : (
-          <Routes>
-            <Route path="*" element={<Login onLogin={handleLogin} />} />
-          </Routes>
-        )}
-      </BrowserRouter>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 p-6">
+      <div className="max-w-6xl mx-auto">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-4">
+            📋 Visa & Legal Requirements
+          </h1>
+          <p className="text-xl text-gray-600 mb-6">
+            Complete documentation checklist for your UK visa application
+          </p>
+          
+          {/* Document Progress */}
+          <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">📄 Document Collection Progress</h2>
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-sm font-medium text-blue-700">Documents Ready</span>
+              <span className="text-sm font-medium text-blue-700">{progress.checked} of {progress.total}</span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-3 mb-4">
+              <div 
+                className="bg-gradient-to-r from-green-500 to-blue-500 h-3 rounded-full transition-all duration-500 ease-out"
+                style={{ width: `${progressPercentage}%` }}
+              ></div>
+            </div>
+            <p className="text-gray-600">
+              {progress.checked === progress.total && progress.total > 0 
+                ? "🎉 Congratulations! All documents are ready for submission." 
+                : `Keep going! You have ${progress.total - progress.checked} documents left to collect.`
+              }
+            </p>
+          </div>
+        </div>
+
+        {/* Visa Type Selector */}
+        <div className="mb-8">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">🎯 Select Your Visa Type</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {visaRequirements.visa_types.map((visa) => (
+              <button
+                key={visa.id}
+                onClick={() => setSelectedVisa(visa)}
+                className={`p-4 rounded-xl text-left transition-all duration-300 ${
+                  selectedVisa?.id === visa.id
+                    ? 'bg-blue-600 text-white transform scale-105'
+                    : 'bg-white text-gray-900 hover:bg-blue-50 hover:scale-102'
+                }`}
+              >
+                <h3 className="font-bold text-lg mb-2">{visa.visa_type}</h3>
+                <p className="text-sm opacity-90">Fee: {visa.fee}</p>
+                <p className="text-sm opacity-90">Processing: {visa.processing_time}</p>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Selected Visa Details */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+          {/* Visa Information */}
+          <div className="bg-white rounded-xl shadow-lg p-6">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">
+              📊 {selectedVisa.visa_type} Details
+            </h2>
+            <div className="space-y-4">
+              <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
+                <span className="font-medium">Application Fee:</span>
+                <span className="text-xl font-bold text-blue-600">{selectedVisa.fee}</span>
+              </div>
+              <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
+                <span className="font-medium">Processing Time:</span>
+                <span className="text-xl font-bold text-green-600">{selectedVisa.processing_time}</span>
+              </div>
+              <div className="p-3 bg-gray-50 rounded-lg">
+                <h3 className="font-semibold mb-2">📋 Requirements:</h3>
+                <ul className="space-y-1">
+                  {selectedVisa.requirements.map((req, index) => (
+                    <li key={index} className="text-sm text-gray-700 flex items-start">
+                      <span className="text-blue-500 mr-2">•</span>
+                      {req}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          {/* Application Process */}
+          <div className="bg-white rounded-xl shadow-lg p-6">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">
+              🚀 Application Process
+            </h2>
+            <div className="space-y-4">
+              {selectedVisa.application_process.map((step, index) => (
+                <div key={index} className="flex items-start">
+                  <div className="flex-shrink-0 w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold text-sm mr-3">
+                    {index + 1}
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-gray-700">{step}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Interactive Document Checklist */}
+        <div className="bg-white rounded-xl shadow-lg p-6">
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">
+            ✅ Interactive Document Checklist
+          </h2>
+          <p className="text-gray-600 mb-6">
+            Check off each document as you collect it. This will help you track your progress and ensure you have everything needed for your application.
+          </p>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {Object.entries(selectedVisa.required_documents).map(([category, documents], categoryIndex) => {
+              const colors = [
+                'border-l-blue-500 bg-blue-50',
+                'border-l-green-500 bg-green-50',
+                'border-l-purple-500 bg-purple-50',
+                'border-l-yellow-500 bg-yellow-50',
+                'border-l-red-500 bg-red-50',
+                'border-l-indigo-500 bg-indigo-50'
+              ];
+              
+              const categoryDocs = documents.filter(doc => doc.trim() !== '');
+              const checkedInCategory = categoryDocs.filter((_, docIndex) => 
+                documentChecklist[`${category}_${docIndex}`]
+              ).length;
+              
+              return (
+                <div key={category} className={`rounded-xl shadow-lg p-6 border-l-4 transition-all duration-300 hover:shadow-xl ${colors[categoryIndex % colors.length]}`}>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-bold text-gray-900 capitalize">
+                      {category.replace('_', ' ')}
+                    </h3>
+                    <span className="bg-white px-2 py-1 rounded-full text-sm font-medium text-gray-600">
+                      {checkedInCategory}/{categoryDocs.length}
+                    </span>
+                  </div>
+                  
+                  <ul className="space-y-3">
+                    {categoryDocs.map((doc, docIndex) => {
+                      const isChecked = documentChecklist[`${category}_${docIndex}`];
+                      return (
+                        <li key={docIndex} className="flex items-start">
+                          <label className="flex items-start cursor-pointer group w-full">
+                            <input
+                              type="checkbox"
+                              checked={isChecked || false}
+                              onChange={() => toggleDocument(category, docIndex)}
+                              className="mr-3 mt-1 h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded transition-all duration-200"
+                            />
+                            <span className={`text-sm transition-all duration-200 group-hover:text-blue-600 ${
+                              isChecked ? 'line-through text-gray-500' : 'text-gray-700'
+                            }`}>
+                              {doc}
+                            </span>
+                            {isChecked && (
+                              <span className="ml-2 text-green-500">✅</span>
+                            )}
+                          </label>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="mt-8 text-center">
+          <div className="bg-white rounded-xl shadow-lg p-6">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">🎯 Next Steps</h2>
+            <p className="text-gray-600 mb-6">
+              Ready to move forward with your visa application? Check out these helpful resources.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <button className="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 transition duration-300 font-medium">
+                🌐 Visit UK.gov Official Site
+              </button>
+              <button className="bg-green-600 text-white px-8 py-3 rounded-lg hover:bg-green-700 transition duration-300 font-medium">
+                📱 Book Biometric Appointment
+              </button>
+              <Link 
+                to="/timeline"
+                className="bg-purple-600 text-white px-8 py-3 rounded-lg hover:bg-purple-700 transition duration-300 font-medium"
+              >
+                📅 View Full Timeline
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
-}
-
-const AuthenticatedApp = ({ user, onLogout }) => {
-  const location = useLocation();
-
-  return (
-    <>
-      <Navigation user={user} onLogout={onLogout} currentPath={location.pathname} />
-      <Routes>
-        <Route path="/dashboard" element={<DashboardPage />} />
-        <Route path="/timeline" element={<TimelinePage />} />
-        <Route path="/resources" element={<ResourcesPage />} />
-        <Route path="/housing" element={<HousingPage />} />
-        <Route path="/employment" element={<EmploymentPage />} />
-        <Route path="/visa" element={<VisaPage />} />
-        <Route path="/progress" element={<ProgressPage />} />
-        <Route path="/analytics" element={<AnalyticsPage />} />
-        <Route path="/logistics" element={<LogisticsPage />} />
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
-      </Routes>
-    </>
-  );
 };
-
-export default App;
