@@ -334,8 +334,87 @@ class RelocateMeAPITester:
         )
         return success, response
 
-    def print_summary(self):
-        """Print test summary"""
+    def test_get_progress_items(self, category=None, status=None):
+        """Test getting progress items with optional filters"""
+        endpoint = "progress/items"
+        if category or status:
+            params = []
+            if category:
+                params.append(f"category={category}")
+            if status:
+                params.append(f"status={status}")
+            endpoint += f"?{'&'.join(params)}"
+        
+        success, response = self.run_test(
+            f"Get Progress Items{' (Filtered)' if category or status else ''}",
+            "GET",
+            endpoint,
+            200,
+            auth_required=True
+        )
+        return success, response
+    
+    def test_toggle_subtask(self, item_id, subtask_index):
+        """Test toggling a subtask"""
+        success, response = self.run_test(
+            f"Toggle Subtask {subtask_index} for Item {item_id}",
+            "POST",
+            f"progress/items/{item_id}/subtask",
+            200,
+            data={"subtask_index": subtask_index},
+            auth_required=True
+        )
+        return success, response
+    
+    def test_update_progress_item(self, item_id, status=None, notes=None, priority=None):
+        """Test updating a progress item"""
+        data = {}
+        if status:
+            data["status"] = status
+        if notes:
+            data["notes"] = notes
+        if priority:
+            data["priority"] = priority
+            
+        success, response = self.run_test(
+            f"Update Progress Item {item_id}",
+            "PUT",
+            f"progress/items/{item_id}",
+            200,
+            data=data,
+            auth_required=True
+        )
+        return success, response
+    
+    def test_update_timeline_progress(self, step_id, completed, notes=None):
+        """Test updating timeline step progress"""
+        data = {
+            "step_id": step_id,
+            "completed": completed
+        }
+        if notes:
+            data["notes"] = notes
+            
+        success, response = self.run_test(
+            f"Update Timeline Step {step_id} Progress",
+            "POST",
+            "timeline/update-progress",
+            200,
+            data=data,
+            auth_required=True
+        )
+        return success, response
+    
+    def test_get_progress_dashboard(self):
+        """Test getting progress dashboard"""
+        success, response = self.run_test(
+            "Get Progress Dashboard",
+            "GET",
+            "progress/dashboard",
+            200,
+            auth_required=True
+        )
+        return success, response
         print("\n" + "="*50)
         print(f"📊 Test Summary: {self.tests_passed}/{self.tests_run} tests passed")
         print("="*50)
