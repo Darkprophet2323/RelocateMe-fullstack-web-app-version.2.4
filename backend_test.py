@@ -415,9 +415,9 @@ class RelocateMeAPITester:
             auth_required=True
         )
         return success, response
-        print("\n" + "="*50)
-        print(f"📊 Test Summary: {self.tests_passed}/{self.tests_run} tests passed")
-        print("="*50)
+        
+    def print_summary(self):
+        """Print test summary"""
         
         if self.tests_passed < self.tests_run:
             print("\nFailed Tests:")
