@@ -2363,6 +2363,7 @@ const ProgressPage = () => {
       </div>
     </div>
   );
+};
 
 // Main App component
 function App() {
