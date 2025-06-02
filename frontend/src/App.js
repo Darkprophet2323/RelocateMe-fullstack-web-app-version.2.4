@@ -945,3 +945,444 @@ const VisaPage = () => {
     </div>
   );
 };
+
+// Employment Page with Job Filtering
+const EmploymentPage = () => {
+  const [jobsData, setJobsData] = useState({ jobs: [], categories: [], job_types: [] });
+  const [filteredJobs, setFilteredJobs] = useState([]);
+  const [filters, setFilters] = useState({
+    category: 'all',
+    job_type: 'all',
+    search: ''
+  });
+
+  useEffect(() => {
+    const fetchJobs = async () => {
+      try {
+        const response = await axios.get(`${API}/jobs/listings`);
+        setJobsData(response.data);
+        setFilteredJobs(response.data.jobs);
+      } catch (error) {
+        console.error('Error fetching jobs:', error);
+      }
+    };
+    fetchJobs();
+  }, []);
+
+  useEffect(() => {
+    let filtered = jobsData.jobs;
+
+    if (filters.category !== 'all') {
+      filtered = filtered.filter(job => job.category === filters.category);
+    }
+
+    if (filters.job_type !== 'all') {
+      filtered = filtered.filter(job => job.job_type === filters.job_type);
+    }
+
+    if (filters.search) {
+      filtered = filtered.filter(job => 
+        job.title.toLowerCase().includes(filters.search.toLowerCase()) ||
+        job.company.toLowerCase().includes(filters.search.toLowerCase()) ||
+        job.location.toLowerCase().includes(filters.search.toLowerCase())
+      );
+    }
+
+    setFilteredJobs(filtered);
+  }, [filters, jobsData]);
+
+  const updateFilter = (key, value) => {
+    setFilters(prev => ({ ...prev, [key]: value }));
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 p-6">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-4">
+            💼 Peak District Job Opportunities
+          </h1>
+          <p className="text-xl text-gray-600 mb-6">
+            Discover {jobsData.jobs.length} real job opportunities in your new home region
+          </p>
+        </div>
+
+        {/* Filters */}
+        <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+          <h2 className="text-xl font-bold text-gray-900 mb-4">🔍 Filter Jobs</h2>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Search</label>
+              <input
+                type="text"
+                placeholder="Job title, company, location..."
+                value={filters.search}
+                onChange={(e) => updateFilter('search', e.target.value)}
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
+              <select
+                value={filters.category}
+                onChange={(e) => updateFilter('category', e.target.value)}
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="all">All Categories</option>
+                {jobsData.categories.map(category => (
+                  <option key={category} value={category}>{category}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Job Type</label>
+              <select
+                value={filters.job_type}
+                onChange={(e) => updateFilter('job_type', e.target.value)}
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="all">All Types</option>
+                {jobsData.job_types.map(type => (
+                  <option key={type} value={type}>{type.replace('-', ' ').toUpperCase()}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex items-end">
+              <button
+                onClick={() => setFilters({ category: 'all', job_type: 'all', search: '' })}
+                className="w-full bg-gray-600 text-white px-4 py-3 rounded-lg hover:bg-gray-700 transition duration-300 font-medium"
+              >
+                🔄 Reset Filters
+              </button>
+            </div>
+          </div>
+          <div className="mt-4 text-center">
+            <span className="text-gray-600">
+              Showing {filteredJobs.length} of {jobsData.jobs.length} jobs
+            </span>
+          </div>
+        </div>
+
+        {/* Job Listings */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {filteredJobs.map(job => (
+            <div key={job.id} className="bg-white rounded-xl shadow-lg p-6 transition-all duration-300 hover:shadow-xl hover:scale-102">
+              <div className="flex items-start justify-between mb-4">
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900 mb-2">{job.title}</h3>
+                  <p className="text-lg text-blue-600 font-semibold">{job.company}</p>
+                  <p className="text-gray-600">📍 {job.location}</p>
+                </div>
+                <div className="text-right">
+                  <div className="text-2xl font-bold text-green-600">{job.salary}</div>
+                  <div className="text-sm text-gray-500">{job.job_type.replace('-', ' ')}</div>
+                </div>
+              </div>
+
+              <p className="text-gray-700 mb-4 leading-relaxed">{job.description}</p>
+
+              <div className="flex flex-wrap gap-2 mb-4">
+                <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
+                  {job.category}
+                </span>
+                <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
+                  {job.job_type.replace('-', ' ')}
+                </span>
+                {job.remote_work && (
+                  <span className="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm font-medium">
+                    🏠 Remote Available
+                  </span>
+                )}
+              </div>
+
+              <div className="border-t pt-4">
+                <h4 className="font-semibold text-gray-900 mb-2">Key Requirements:</h4>
+                <ul className="text-sm text-gray-600 space-y-1 mb-4">
+                  {job.requirements.slice(0, 3).map((req, idx) => (
+                    <li key={idx} className="flex items-start">
+                      <span className="text-blue-500 mr-2">•</span>
+                      {req}
+                    </li>
+                  ))}
+                  {job.requirements.length > 3 && (
+                    <li className="text-gray-500 italic">
+                      +{job.requirements.length - 3} more requirements
+                    </li>
+                  )}
+                </ul>
+
+                <div className="flex justify-between items-center">
+                  <div className="text-sm text-gray-500">
+                    Posted: {new Date(job.posted_date).toLocaleDateString()}
+                  </div>
+                  <a
+                    href={job.application_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition duration-300 font-medium"
+                  >
+                    Apply Now →
+                  </a>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {filteredJobs.length === 0 && (
+          <div className="text-center py-12">
+            <div className="text-6xl mb-4">🔍</div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">No Jobs Found</h2>
+            <p className="text-gray-600">Try adjusting your search criteria or browse all available positions.</p>
+            <button
+              onClick={() => setFilters({ category: 'all', job_type: 'all', search: '' })}
+              className="mt-4 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition duration-300 font-medium"
+            >
+              🔄 Show All Jobs
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// Housing Page
+const HousingPage = () => {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 p-6">
+      <div className="max-w-6xl mx-auto">
+        <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent text-center mb-8">
+          🏘️ Housing Guide: Phoenix vs Peak District
+        </h1>
+        <div className="text-center text-gray-600 mb-8">
+          Comprehensive comparison to help you find your perfect new home
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Resources Page
+const ResourcesPage = () => {
+  const [resources, setResources] = useState({});
+
+  useEffect(() => {
+    const fetchResources = async () => {
+      try {
+        const response = await axios.get(`${API}/resources/all`);
+        setResources(response.data);
+      } catch (error) {
+        console.error('Error fetching resources:', error);
+      }
+    };
+    fetchResources();
+  }, []);
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 p-6">
+      <div className="max-w-6xl mx-auto">
+        <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent text-center mb-8">
+          🔗 Helpful Resources
+        </h1>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {Object.entries(resources).map(([category, items], index) => (
+            <div key={category} className="bg-white rounded-xl shadow-lg p-6">
+              <h2 className="text-xl font-bold text-gray-900 mb-4 capitalize">
+                {category.replace('_', ' & ')}
+              </h2>
+              <div className="space-y-3">
+                {items.map((item, idx) => (
+                  <a
+                    key={idx}
+                    href={item.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block p-3 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition duration-300"
+                  >
+                    <h3 className="font-semibold text-blue-600">{item.name}</h3>
+                    <p className="text-sm text-gray-600">{item.description}</p>
+                  </a>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Logistics Page
+const LogisticsPage = () => {
+  const [providers, setProviders] = useState([]);
+
+  useEffect(() => {
+    const fetchProviders = async () => {
+      try {
+        const response = await axios.get(`${API}/logistics/providers`);
+        setProviders(response.data.providers);
+      } catch (error) {
+        console.error('Error fetching logistics providers:', error);
+      }
+    };
+    fetchProviders();
+  }, []);
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 p-6">
+      <div className="max-w-6xl mx-auto">
+        <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent text-center mb-8">
+          📦 Moving & Logistics
+        </h1>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {providers.map(provider => (
+            <div key={provider.id} className="bg-white rounded-xl shadow-lg p-6">
+              <h2 className="text-xl font-bold text-gray-900 mb-2">{provider.company_name}</h2>
+              <div className="flex items-center mb-3">
+                <div className="flex text-yellow-400">
+                  {[...Array(5)].map((_, i) => (
+                    <span key={i} className={i < provider.rating ? "★" : "☆"}>
+                      {i < provider.rating ? "★" : "☆"}
+                    </span>
+                  ))}
+                </div>
+                <span className="ml-2 text-gray-600">({provider.rating}/5)</span>
+              </div>
+              <p className="text-gray-600 mb-4">{provider.description}</p>
+              <div className="space-y-2">
+                <p><strong>Services:</strong> {provider.service_types.join(', ')}</p>
+                <p><strong>Est. Cost:</strong> {provider.estimated_cost}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Analytics Page
+const AnalyticsPage = () => {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 p-6">
+      <div className="max-w-6xl mx-auto">
+        <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent text-center mb-8">
+          📈 Progress Analytics
+        </h1>
+        <div className="text-center text-gray-600">
+          Detailed analytics and insights about your relocation progress
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Authentication Components
+const LoginPage = ({ onLogin }) => {
+  const [credentials, setCredentials] = useState({ username: '', password: '' });
+
+  const handleLogin = (e) => {
+    e.preventDefault();
+    onLogin(credentials.username);
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center p-6">
+      <div className="bg-white rounded-xl shadow-xl p-8 w-full max-w-md">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">
+            🏔️ Relocate Me
+          </h1>
+          <p className="text-gray-600">Phoenix → Peak District</p>
+        </div>
+        
+        <form onSubmit={handleLogin}>
+          <div className="mb-4">
+            <label className="block text-gray-700 text-sm font-bold mb-2">
+              Username
+            </label>
+            <input
+              type="text"
+              value={credentials.username}
+              onChange={(e) => setCredentials({...credentials, username: e.target.value})}
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="Enter your username"
+              required
+            />
+          </div>
+          
+          <div className="mb-6">
+            <label className="block text-gray-700 text-sm font-bold mb-2">
+              Password
+            </label>
+            <input
+              type="password"
+              value={credentials.password}
+              onChange={(e) => setCredentials({...credentials, password: e.target.value})}
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="Enter your password"
+              required
+            />
+          </div>
+          
+          <button
+            type="submit"
+            className="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition duration-300"
+          >
+            Login to Your Journey
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+// Main App Component
+const App = () => {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [user, setUser] = useState("");
+
+  const handleLogin = (username) => {
+    setUser(username);
+    setIsAuthenticated(true);
+  };
+
+  const handleLogout = () => {
+    setUser("");
+    setIsAuthenticated(false);
+  };
+
+  if (!isAuthenticated) {
+    return <LoginPage onLogin={handleLogin} />;
+  }
+
+  return <AuthenticatedApp user={user} onLogout={handleLogout} />;
+};
+
+const AuthenticatedApp = ({ user, onLogout }) => {
+  const location = useLocation();
+
+  return (
+    <>
+      <Navigation user={user} onLogout={onLogout} currentPath={location.pathname} />
+      <Routes>
+        <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/timeline" element={<TimelinePage />} />
+        <Route path="/progress" element={<ProgressPage />} />
+        <Route path="/visa" element={<VisaPage />} />
+        <Route path="/employment" element={<EmploymentPage />} />
+        <Route path="/housing" element={<HousingPage />} />
+        <Route path="/resources" element={<ResourcesPage />} />
+        <Route path="/logistics" element={<LogisticsPage />} />
+        <Route path="/analytics" element={<AnalyticsPage />} />
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      </Routes>
+    </>
+  );
+};
+
+export default App;
