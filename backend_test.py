@@ -517,8 +517,62 @@ def main():
     
     # Test timeline endpoints
     print("\n=== Testing Timeline Data ===")
-    tester.test_get_timeline_full()
+    timeline_success, timeline_data = tester.test_get_timeline_full()
+    if timeline_success and 'timeline' in timeline_data:
+        print(f"✅ Found {len(timeline_data['timeline'])} timeline steps")
+        
+        # Test updating a timeline step
+        if timeline_data['timeline']:
+            step = timeline_data['timeline'][0]
+            step_id = step['id']
+            current_status = step.get('is_completed', False)
+            
+            # Toggle the step status
+            update_success, update_response = tester.test_update_timeline_progress(step_id, not current_status)
+            if update_success:
+                print(f"✅ Successfully toggled timeline step {step_id} status")
+                
+                # Toggle it back
+                tester.test_update_timeline_progress(step_id, current_status)
+    
     tester.test_get_timeline_by_category()
+    
+    # Test progress items endpoints
+    print("\n=== Testing Progress Items ===")
+    progress_success, progress_data = tester.test_get_progress_items()
+    if progress_success and 'items' in progress_data:
+        print(f"✅ Found {len(progress_data['items'])} progress items")
+        
+        # Test filtering by category
+        if 'categories' in progress_data and progress_data['categories']:
+            category = progress_data['categories'][0]
+            tester.test_get_progress_items(category=category)
+        
+        # Test filtering by status
+        if 'statuses' in progress_data and progress_data['statuses']:
+            status = progress_data['statuses'][0]
+            tester.test_get_progress_items(status=status)
+        
+        # Test updating a progress item
+        if progress_data['items']:
+            item = progress_data['items'][0]
+            item_id = item['id']
+            current_status = item.get('status', 'not_started')
+            new_status = 'in_progress' if current_status != 'in_progress' else 'completed'
+            
+            update_success, update_response = tester.test_update_progress_item(item_id, status=new_status)
+            if update_success:
+                print(f"✅ Successfully updated progress item {item_id} status to {new_status}")
+                
+                # Test toggling a subtask
+                if 'subtasks' in item and item['subtasks']:
+                    subtask_index = 0
+                    toggle_success, toggle_response = tester.test_toggle_subtask(item_id, subtask_index)
+                    if toggle_success:
+                        print(f"✅ Successfully toggled subtask {subtask_index} for item {item_id}")
+    
+    # Test progress dashboard
+    tester.test_get_progress_dashboard()
     
     # Test resources endpoint
     print("\n=== Testing Resources ===")
