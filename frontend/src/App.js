@@ -1343,6 +1343,14 @@ const LoginPage = ({ onLogin }) => {
 
 // Main App Component
 const App = () => {
+  return (
+    <Router>
+      <AppContent />
+    </Router>
+  );
+};
+
+const AppContent = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState("");
 
