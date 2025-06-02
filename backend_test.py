@@ -353,7 +353,7 @@ class RelocateMeAPITester:
 
 def main():
     # Get the backend URL from the frontend .env file
-    backend_url = "https://1052d882-4c38-4389-9c98-60c715911d5c.preview.emergentagent.com"
+    backend_url = "https://1d4c9891-5133-414d-838f-dade885277af.preview.emergentagent.com"
     
     print(f"Testing Relocate Me API at: {backend_url}")
     
