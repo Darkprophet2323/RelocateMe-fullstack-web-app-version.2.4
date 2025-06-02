@@ -1023,7 +1023,7 @@ async def get_timeline_by_category(current_user: User = Depends(get_current_user
     return categories
 
 @api_router.post("/timeline/update-progress")
-async def update_step_progress(progress: ProgressUpdate, current_user: User = Depends(get_current_user)):
+async def update_step_progress(progress: TimelineProgressUpdate, current_user: User = Depends(get_current_user)):
     user_completed_steps = current_user.completed_steps.copy()
     
     if progress.completed and progress.step_id not in user_completed_steps:
