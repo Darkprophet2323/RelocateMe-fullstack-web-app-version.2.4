@@ -63,7 +63,7 @@ class Token(BaseModel):
     access_token: str
     token_type: str
 
-class ProgressUpdate(BaseModel):
+class TimelineProgressUpdate(BaseModel):
     step_id: int
     completed: bool
     notes: Optional[str] = None
