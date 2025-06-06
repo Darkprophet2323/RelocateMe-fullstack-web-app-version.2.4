@@ -1216,7 +1216,7 @@ async def update_progress_item(item_id: str, update_data: ProgressUpdate, curren
     
     return {"message": "Progress item updated successfully", "updated_fields": update_fields}
 
-@api_router.post("/progress/items/{item_id}/subtask")
+@api_router.post("/progress/items/{item_id}/subtasks/{subtask_index}/toggle")
 async def toggle_subtask(item_id: str, subtask_index: int, current_user: User = Depends(get_current_user)):
     # Find the item
     existing_item = await db.progress_items.find_one({"id": item_id, "user_id": current_user.id})
