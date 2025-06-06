@@ -472,3 +472,594 @@ const TimelinePage = () => {
     </div>
   );
 };
+
+// Enhanced Progress Page with Interactive Checklist and Noir Theme
+const ProgressPage = () => {
+  const [progressItems, setProgressItems] = useState([]);
+  const [editingNotes, setEditingNotes] = useState(null);
+  const [tempNote, setTempNote] = useState('');
+
+  useEffect(() => {
+    fetchProgressItems();
+  }, []);
+
+  const fetchProgressItems = async () => {
+    try {
+      const response = await axios.get(`${API}/api/progress/items`);
+      setProgressItems(response.data.items || []);
+    } catch (error) {
+      console.error('Error fetching progress items:', error);
+      // Use fallback data
+      setProgressItems([
+        {
+          id: '1',
+          title: 'Gather Birth Certificate',
+          description: 'Obtain certified copy of birth certificate for visa application',
+          status: 'completed',
+          category: 'Documentation',
+          subtasks: [
+            { task: 'Request birth certificate online', completed: true },
+            { task: 'Pay processing fee', completed: true },
+            { task: 'Receive by mail', completed: true }
+          ],
+          notes: 'Received certified copy from state office. Cost $25.'
+        },
+        {
+          id: '2',
+          title: 'Complete Visa Application Form',
+          description: 'Fill out UK Skilled Worker visa application online',
+          status: 'in_progress',
+          category: 'Visa Application',
+          subtasks: [
+            { task: 'Create UK government account', completed: true },
+            { task: 'Fill application form', completed: false },
+            { task: 'Upload documents', completed: false }
+          ],
+          notes: 'Application 70% complete.'
+        }
+      ]);
+    }
+  };
+
+  const updateItemStatus = async (itemId, newStatus) => {
+    try {
+      await axios.put(`${API}/api/progress/items/${itemId}`, {
+        status: newStatus
+      });
+      fetchProgressItems();
+    } catch (error) {
+      console.error('Error updating item status:', error);
+    }
+  };
+
+  const toggleSubtask = async (itemId, subtaskIndex) => {
+    try {
+      await axios.post(`${API}/api/progress/items/${itemId}/subtasks/${subtaskIndex}/toggle`);
+      fetchProgressItems();
+    } catch (error) {
+      console.error('Error toggling subtask:', error);
+    }
+  };
+
+  const saveNotes = async (itemId, notes) => {
+    try {
+      await axios.put(`${API}/api/progress/items/${itemId}`, {
+        notes: notes
+      });
+      setEditingNotes(null);
+      setTempNote('');
+      fetchProgressItems();
+    } catch (error) {
+      console.error('Error saving notes:', error);
+    }
+  };
+
+  const startEditingNotes = (item) => {
+    setEditingNotes(item.id);
+    setTempNote(item.notes || '');
+  };
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'completed': return 'border-white text-white bg-gray-900';
+      case 'in_progress': return 'border-yellow-600 text-yellow-400 bg-yellow-900';
+      case 'blocked': return 'border-red-600 text-red-400 bg-red-900';
+      default: return 'border-gray-600 text-gray-300 bg-gray-800';
+    }
+  };
+
+  const getStatusIcon = (status) => {
+    switch (status) {
+      case 'completed': return '✅';
+      case 'in_progress': return '🔄';
+      case 'blocked': return '🚫';
+      default: return '⏳';
+    }
+  };
+
+  const completedItems = progressItems.filter(item => item.status === 'completed').length;
+  const totalItems = progressItems.length;
+
+  const progressLinks = [
+    { name: "TRELLO COMMAND", url: "https://trello.com", description: "Task management system" },
+    { name: "MOVING INTEL", url: "https://www.moving.com/tips/moving-checklist/", description: "Operational guidelines" },
+    { name: "MOBILE APPS", url: "https://www.apartmenttherapy.com/best-moving-apps-36683126", description: "Field support tools" },
+    { name: "EXPAT NETWORK", url: "https://www.internations.org", description: "Agent network access" }
+  ];
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-black to-gray-900 p-6">
+      <div className="max-w-6xl mx-auto">
+        {/* Header */}
+        <div className="text-center mb-8 fade-in">
+          <h1 className="text-5xl font-bold font-serif text-white mb-6">
+            STATUS TRACKING
+          </h1>
+          <p className="text-xl text-gray-400 mb-8 font-mono tracking-wide">
+            [ INTERACTIVE MISSION PROGRESS MONITOR ]
+          </p>
+          
+          <ProgressWizard 
+            currentStep={completedItems + 1} 
+            totalSteps={totalItems} 
+            completedSteps={completedItems} 
+          />
+        </div>
+
+        {/* Progress Resources */}
+        <div className="mb-8">
+          <h2 className="text-2xl font-bold text-white mb-6 font-mono text-center tracking-wider">SUPPORT SYSTEMS</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {progressLinks.map((link, index) => (
+              <a
+                key={index}
+                href={link.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bg-black border border-gray-600 p-4 hover:border-white hover:bg-gray-900 transition-all duration-300"
+              >
+                <h3 className="font-bold text-white mb-2 font-mono tracking-wide">{link.name}</h3>
+                <p className="text-gray-400 text-sm font-mono">{link.description}</p>
+              </a>
+            ))}
+          </div>
+        </div>
+
+        {/* Progress Items */}
+        <div className="space-y-6">
+          {progressItems.map((item, index) => (
+            <div key={item.id} className="bg-black border border-gray-600 p-8 transition-all duration-300 hover:border-white hover:bg-gray-900">
+              <div className="flex items-start justify-between mb-6">
+                <div className="flex items-center space-x-6">
+                  <div className={`w-16 h-16 border-2 flex items-center justify-center text-2xl font-bold font-mono ${
+                    item.status === 'completed' ? 'bg-white text-black border-white' : 
+                    item.status === 'in_progress' ? 'bg-yellow-900 border-yellow-600 text-yellow-400' :
+                    item.status === 'blocked' ? 'bg-red-900 border-red-600 text-red-400' : 'bg-gray-800 border-gray-600 text-gray-300'
+                  }`}>
+                    {getStatusIcon(item.status)}
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-bold text-white font-mono tracking-wide">{item.title}</h2>
+                    <span className={`inline-block px-4 py-2 text-sm font-mono font-bold tracking-wider uppercase border ${getStatusColor(item.status)}`}>
+                      {item.status.replace('_', ' ')}
+                    </span>
+                  </div>
+                </div>
+                
+                <div className="flex items-center space-x-4">
+                  <select
+                    value={item.status}
+                    onChange={(e) => updateItemStatus(item.id, e.target.value)}
+                    className="border-2 border-gray-600 bg-black text-white px-4 py-2 font-mono focus:border-white focus:outline-none transition-all duration-300"
+                  >
+                    <option value="not_started">NOT STARTED</option>
+                    <option value="in_progress">IN PROGRESS</option>
+                    <option value="completed">COMPLETED</option>
+                    <option value="blocked">BLOCKED</option>
+                  </select>
+                </div>
+              </div>
+
+              <p className="text-gray-300 mb-6 leading-relaxed font-mono">{item.description}</p>
+
+              {/* Progress Bar */}
+              <div className="mb-6">
+                <div className="flex justify-between items-center mb-3">
+                  <span className="text-sm font-mono text-gray-400 tracking-wider uppercase">SUBTASK PROGRESS</span>
+                  <span className="text-sm text-gray-400 font-mono">
+                    {item.subtasks.filter(st => st.completed).length}/{item.subtasks.length}
+                  </span>
+                </div>
+                <div className="w-full bg-gray-800 h-2 border border-gray-600">
+                  <div 
+                    className="bg-white h-full transition-all duration-500 relative"
+                    style={{ 
+                      width: `${(item.subtasks.filter(st => st.completed).length / item.subtasks.length) * 100}%` 
+                    }}
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-50 animate-pulse"></div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Interactive Subtasks */}
+              <div className="space-y-4 mb-8">
+                <h3 className="font-semibold text-white font-mono tracking-wider">TASK CHECKLIST:</h3>
+                {item.subtasks.map((subtask, subIndex) => (
+                  <label key={subIndex} className="flex items-center cursor-pointer group">
+                    <input
+                      type="checkbox"
+                      checked={subtask.completed}
+                      onChange={() => toggleSubtask(item.id, subIndex)}
+                      className="mr-4 w-6 h-6 border-2 border-gray-600 bg-black checked:bg-white checked:border-white appearance-none cursor-pointer relative transition-all duration-200"
+                      style={{
+                        backgroundImage: subtask.completed ? "url(\"data:image/svg+xml,%3csvg viewBox='0 0 16 16' fill='black' xmlns='http://www.w3.org/2000/svg'%3e%3cpath d='m13.854 3.646-7.5 7.5a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6 10.293l7.146-7.147a.5.5 0 0 1 .708.708z'/%3e%3c/svg%3e\")" : 'none'
+                      }}
+                    />
+                    <span className={`font-mono transition-all duration-200 group-hover:text-white ${
+                      subtask.completed ? 'line-through text-gray-500' : 'text-gray-300'
+                    }`}>
+                      {subtask.task}
+                    </span>
+                    {subtask.completed && (
+                      <span className="ml-3 text-white">✅</span>
+                    )}
+                  </label>
+                ))}
+              </div>
+
+              {/* Notes Section */}
+              <div className="border-t border-gray-700 pt-6">
+                <h3 className="font-semibold text-white mb-4 font-mono tracking-wider">OPERATIONAL NOTES:</h3>
+                {editingNotes === item.id ? (
+                  <div className="space-y-4">
+                    <textarea
+                      value={tempNote}
+                      onChange={(e) => setTempNote(e.target.value)}
+                      className="w-full p-4 border-2 border-gray-600 bg-black text-white font-mono focus:border-white focus:outline-none transition-all duration-300"
+                      rows="4"
+                      placeholder="Enter operational notes..."
+                    />
+                    <div className="flex space-x-4">
+                      <button
+                        onClick={() => saveNotes(item.id, tempNote)}
+                        className="bg-white text-black px-6 py-3 border-2 border-white hover:bg-gray-200 transition-all duration-300 font-mono font-bold tracking-wider"
+                      >
+                        [SAVE]
+                      </button>
+                      <button
+                        onClick={() => {
+                          setEditingNotes(null);
+                          setTempNote('');
+                        }}
+                        className="bg-transparent text-white px-6 py-3 border-2 border-gray-600 hover:border-white transition-all duration-300 font-mono font-bold tracking-wider"
+                      >
+                        [CANCEL]
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="bg-gray-900 border border-gray-700 p-4">
+                      <p className="text-gray-300 font-mono leading-relaxed">
+                        {item.notes || 'No operational notes recorded. Click "EDIT NOTES" to add intelligence data.'}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => startEditingNotes(item)}
+                      className="text-white hover:text-gray-300 font-mono font-bold tracking-wider"
+                    >
+                      [EDIT NOTES]
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {progressItems.length === 0 && (
+          <div className="text-center py-12">
+            <div className="text-6xl mb-6">📋</div>
+            <h2 className="text-3xl font-bold text-white mb-4 font-serif">NO ACTIVE MISSIONS</h2>
+            <p className="text-gray-400 font-mono">Initialize timeline sequence to generate progress items.</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// Visa & Legal Page with Interactive Document Checklist and Noir Theme
+const VisaPage = () => {
+  const [visaRequirements, setVisaRequirements] = useState({ visa_types: [] });
+  const [selectedVisa, setSelectedVisa] = useState(null);
+  const [documentChecklist, setDocumentChecklist] = useState({});
+
+  useEffect(() => {
+    const fetchVisaData = async () => {
+      try {
+        const response = await axios.get(`${API}/api/visa/requirements`);
+        setVisaRequirements(response.data);
+        if (response.data.visa_types.length > 0) {
+          setSelectedVisa(response.data.visa_types[0]);
+        }
+      } catch (error) {
+        console.error('Error fetching visa data:', error);
+        // Use fallback data
+        setVisaRequirements({
+          visa_types: [
+            {
+              id: '1',
+              visa_type: 'Skilled Worker Visa',
+              fee: '£719 - £1,423',
+              processing_time: '3-8 weeks',
+              requirements: ['Job offer from UK employer', 'Certificate of sponsorship', 'English language proficiency'],
+              application_process: ['Secure job offer', 'Receive certificate', 'Apply online', 'Attend biometric appointment'],
+              required_documents: {
+                'identity': ['Valid passport', 'Birth certificate', 'Marriage certificate'],
+                'financial': ['Bank statements', 'Salary evidence', 'Tax returns'],
+                'employment': ['Job offer letter', 'Certificate of sponsorship', 'Qualifications']
+              }
+            }
+          ]
+        });
+        setSelectedVisa({
+          id: '1',
+          visa_type: 'Skilled Worker Visa',
+          fee: '£719 - £1,423',
+          processing_time: '3-8 weeks',
+          requirements: ['Job offer from UK employer', 'Certificate of sponsorship', 'English language proficiency'],
+          application_process: ['Secure job offer', 'Receive certificate', 'Apply online', 'Attend biometric appointment'],
+          required_documents: {
+            'identity': ['Valid passport', 'Birth certificate', 'Marriage certificate'],
+            'financial': ['Bank statements', 'Salary evidence', 'Tax returns'],
+            'employment': ['Job offer letter', 'Certificate of sponsorship', 'Qualifications']
+          }
+        });
+      }
+    };
+    fetchVisaData();
+  }, []);
+
+  const toggleDocument = (category, docIndex) => {
+    const key = `${category}_${docIndex}`;
+    setDocumentChecklist(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
+  };
+
+  const getDocumentProgress = () => {
+    const checkedDocs = Object.values(documentChecklist).filter(Boolean).length;
+    const totalDocs = Object.keys(documentChecklist).length;
+    return { checked: checkedDocs, total: totalDocs };
+  };
+
+  if (!selectedVisa) {
+    return <div className="min-h-screen bg-black flex items-center justify-center">
+      <div className="text-xl text-white font-mono">LOADING CLASSIFIED DATA...</div>
+    </div>;
+  }
+
+  const progress = getDocumentProgress();
+  const progressPercentage = progress.total > 0 ? (progress.checked / progress.total) * 100 : 0;
+
+  const visaLinks = [
+    { name: "UK GOV PORTAL", url: "https://www.gov.uk/browse/visas-immigration", description: "Official state immigration command" },
+    { name: "LEGAL COUNSEL", url: "https://www.lawsociety.org.uk", description: "Qualified immigration attorneys" },
+    { name: "DOCUMENT SERVICES", url: "https://www.gov.uk/get-document-legalised", description: "Authorization and apostille" },
+    { name: "APPLICATION CENTER", url: "https://www.vfsglobal.co.uk", description: "Biometric processing facilities" },
+    { name: "LANGUAGE TESTING", url: "https://www.ielts.org", description: "English proficiency certification" },
+    { name: "MEDICAL EXAM", url: "https://www.gov.uk/tb-test-visa", description: "Health screening requirements" }
+  ];
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-black to-gray-900 p-6">
+      <div className="max-w-6xl mx-auto">
+        {/* Header */}
+        <div className="text-center mb-8 fade-in">
+          <h1 className="text-5xl font-bold font-serif text-white mb-6">
+            LEGAL DOCUMENTATION
+          </h1>
+          <p className="text-xl text-gray-400 mb-8 font-mono tracking-wide">
+            [ VISA REQUIREMENTS & CLASSIFICATION PROTOCOLS ]
+          </p>
+          
+          {/* Document Progress */}
+          <div className="bg-black border border-gray-600 p-8 mb-8 hover:border-white transition-all duration-300">
+            <h2 className="text-3xl font-bold text-white mb-6 font-mono tracking-wider">DOCUMENT STATUS</h2>
+            <div className="flex items-center justify-between mb-6">
+              <span className="text-sm font-mono text-gray-400 tracking-wider uppercase">DOCUMENTS VERIFIED</span>
+              <span className="text-sm font-mono text-gray-400 tracking-wider">{progress.checked} OF {progress.total}</span>
+            </div>
+            <div className="w-full bg-gray-800 h-3 mb-6 border border-gray-600">
+              <div 
+                className="bg-white h-full transition-all duration-1000 ease-out relative"
+                style={{ width: `${progressPercentage}%` }}
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-50 animate-pulse"></div>
+              </div>
+            </div>
+            <p className="text-gray-300 font-mono">
+              {progress.checked === progress.total && progress.total > 0 
+                ? "✅ ALL DOCUMENTS VERIFIED - READY FOR SUBMISSION" 
+                : `CONTINUE VERIFICATION: ${progress.total - progress.checked} DOCUMENTS PENDING`
+              }
+            </p>
+          </div>
+        </div>
+
+        {/* Visa Resources */}
+        <div className="mb-8">
+          <h2 className="text-2xl font-bold text-white mb-6 font-mono text-center tracking-wider">SUPPORT NETWORKS</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {visaLinks.map((link, index) => (
+              <a
+                key={index}
+                href={link.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bg-black border border-gray-600 p-4 hover:border-white hover:bg-gray-900 transition-all duration-300"
+              >
+                <h3 className="font-bold text-white mb-2 font-mono tracking-wide">{link.name}</h3>
+                <p className="text-gray-400 text-sm font-mono">{link.description}</p>
+              </a>
+            ))}
+          </div>
+        </div>
+
+        {/* Selected Visa Details */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+          {/* Visa Information */}
+          <div className="bg-black border border-gray-600 p-8 hover:border-white transition-all duration-300">
+            <h2 className="text-2xl font-bold text-white mb-6 font-mono tracking-wider">
+              {selectedVisa.visa_type.toUpperCase()} SPECS
+            </h2>
+            <div className="space-y-6">
+              <div className="flex justify-between items-center p-4 bg-gray-900 border border-gray-700">
+                <span className="font-mono text-gray-300">APPLICATION FEE:</span>
+                <span className="text-xl font-bold text-white font-mono">{selectedVisa.fee}</span>
+              </div>
+              <div className="flex justify-between items-center p-4 bg-gray-900 border border-gray-700">
+                <span className="font-mono text-gray-300">PROCESSING TIME:</span>
+                <span className="text-xl font-bold text-white font-mono">{selectedVisa.processing_time}</span>
+              </div>
+              <div className="p-4 bg-gray-900 border border-gray-700">
+                <h3 className="font-semibold mb-3 text-white font-mono tracking-wider">REQUIREMENTS:</h3>
+                <ul className="space-y-2">
+                  {selectedVisa.requirements.map((req, index) => (
+                    <li key={index} className="text-sm text-gray-300 flex items-start font-mono">
+                      <span className="text-white mr-3">▸</span>
+                      {req}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          {/* Application Process */}
+          <div className="bg-black border border-gray-600 p-8 hover:border-white transition-all duration-300">
+            <h2 className="text-2xl font-bold text-white mb-6 font-mono tracking-wider">
+              OPERATION SEQUENCE
+            </h2>
+            <div className="space-y-6">
+              {selectedVisa.application_process.map((step, index) => (
+                <div key={index} className="flex items-start">
+                  <div className="flex-shrink-0 w-10 h-10 bg-white text-black border-2 border-white flex items-center justify-center font-bold text-sm mr-4 font-mono">
+                    {String(index + 1).padStart(2, '0')}
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-gray-300 font-mono">{step}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Interactive Document Checklist */}
+        <div className="bg-black border border-gray-600 p-8 hover:border-white transition-all duration-300">
+          <h2 className="text-2xl font-bold text-white mb-8 font-mono tracking-wider">
+            DOCUMENT VERIFICATION CHECKLIST
+          </h2>
+          <p className="text-gray-300 mb-8 font-mono leading-relaxed">
+            Verify each document as collected. This system tracks progress and ensures compliance with requirements.
+          </p>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {Object.entries(selectedVisa.required_documents).map(([category, documents], categoryIndex) => {
+              const colors = [
+                'border-l-white bg-gray-900',
+                'border-l-gray-400 bg-gray-900',
+                'border-l-gray-500 bg-gray-900'
+              ];
+              
+              const categoryDocs = documents.filter(doc => doc.trim() !== '');
+              const checkedInCategory = categoryDocs.filter((_, docIndex) => 
+                documentChecklist[`${category}_${docIndex}`]
+              ).length;
+              
+              return (
+                <div key={category} className={`border-l-4 border border-gray-600 p-6 transition-all duration-300 hover:border-white ${colors[categoryIndex % colors.length]}`}>
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-lg font-bold text-white capitalize font-mono tracking-wider">
+                      {category.replace('_', ' ')}
+                    </h3>
+                    <span className="bg-white text-black px-3 py-1 text-sm font-mono font-bold tracking-wider">
+                      {checkedInCategory}/{categoryDocs.length}
+                    </span>
+                  </div>
+                  
+                  <ul className="space-y-4">
+                    {categoryDocs.map((doc, docIndex) => {
+                      const isChecked = documentChecklist[`${category}_${docIndex}`];
+                      return (
+                        <li key={docIndex} className="flex items-start">
+                          <label className="flex items-start cursor-pointer group w-full">
+                            <input
+                              type="checkbox"
+                              checked={isChecked || false}
+                              onChange={() => toggleDocument(category, docIndex)}
+                              className="mr-4 mt-1 w-5 h-5 border-2 border-gray-600 bg-black checked:bg-white checked:border-white appearance-none cursor-pointer relative transition-all duration-200"
+                              style={{
+                                backgroundImage: isChecked ? "url(\"data:image/svg+xml,%3csvg viewBox='0 0 16 16' fill='black' xmlns='http://www.w3.org/2000/svg'%3e%3cpath d='m13.854 3.646-7.5 7.5a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6 10.293l7.146-7.147a.5.5 0 0 1 .708.708z'/%3e%3c/svg%3e\")" : 'none'
+                              }}
+                            />
+                            <span className={`text-sm transition-all duration-200 group-hover:text-white font-mono ${
+                              isChecked ? 'line-through text-gray-500' : 'text-gray-300'
+                            }`}>
+                              {doc}
+                            </span>
+                            {isChecked && (
+                              <span className="ml-3 text-white">✅</span>
+                            )}
+                          </label>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="mt-8 text-center">
+          <div className="bg-black border border-gray-600 p-8 hover:border-white transition-all duration-300">
+            <h2 className="text-3xl font-bold text-white mb-6 font-serif">OPERATIONAL LINKS</h2>
+            <p className="text-gray-300 mb-8 font-mono leading-relaxed">
+              Access official channels and support networks for visa processing.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <a 
+                href="https://www.gov.uk/browse/visas-immigration"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bg-white text-black px-8 py-4 font-mono font-bold tracking-wider hover:bg-gray-200 transition-all duration-300 border-2 border-white"
+              >
+                [UK.GOV] OFFICIAL PORTAL
+              </a>
+              <a 
+                href="https://www.vfsglobal.co.uk"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bg-transparent text-white px-8 py-4 font-mono font-bold tracking-wider border-2 border-white hover:bg-white hover:text-black transition-all duration-300"
+              >
+                [BIOMETRIC] APPOINTMENT
+              </a>
+              <Link 
+                to="/timeline"
+                className="bg-gray-900 text-white px-8 py-4 font-mono font-bold tracking-wider border-2 border-gray-600 hover:border-white transition-all duration-300"
+              >
+                [TIMELINE] VIEW SCHEDULE
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
