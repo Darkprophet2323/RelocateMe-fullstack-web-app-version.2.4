@@ -304,7 +304,7 @@ const DashboardPage = () => {
 // Enhanced Timeline Page with Noir Theme
 const TimelinePage = () => {
   const [timelineData, setTimelineData] = useState({
-    full: { steps: [] },
+    timeline: [],
     categories: {}
   });
   const [activeCategory, setActiveCategory] = useState('all');
@@ -313,20 +313,26 @@ const TimelinePage = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [fullResponse, categoryResponse] = await Promise.all([
-          axios.get(`${API}/api/timeline/full`),
-          axios.get(`${API}/api/timeline/by-category`)
-        ]);
+        const response = await axios.get(`${API}/api/timeline/full`);
         setTimelineData({
-          full: fullResponse.data,
-          categories: categoryResponse.data
+          timeline: response.data.timeline || [],
+          categories: {}
         });
         
         // Count completed steps
-        const completed = fullResponse.data.steps.filter(step => step.is_completed).length;
+        const completed = (response.data.timeline || []).filter(step => step.is_completed).length;
         setCompletedCount(completed);
       } catch (error) {
         console.error('Error fetching timeline data:', error);
+        // Use fallback data
+        setTimelineData({
+          timeline: [
+            { id: 1, title: "Initial Research & Decision", description: "Research Peak District areas, cost of living, and lifestyle", category: "Planning", is_completed: false },
+            { id: 2, title: "Create Relocation Budget", description: "Calculate moving costs, visa fees, initial living expenses", category: "Planning", is_completed: false },
+            { id: 3, title: "Visa Research", description: "Determine visa type needed (work, skilled worker, family, etc.)", category: "Visa & Legal", is_completed: false }
+          ],
+          categories: {}
+        });
       }
     };
     fetchData();
@@ -340,17 +346,14 @@ const TimelinePage = () => {
       });
       
       // Refresh timeline data
-      const [fullResponse, categoryResponse] = await Promise.all([
-        axios.get(`${API}/api/timeline/full`),
-        axios.get(`${API}/api/timeline/by-category`)
-      ]);
+      const response = await axios.get(`${API}/api/timeline/full`);
       setTimelineData({
-        full: fullResponse.data,
-        categories: categoryResponse.data
+        timeline: response.data.timeline || [],
+        categories: {}
       });
       
       // Update completed count
-      const newCompleted = fullResponse.data.steps.filter(step => step.is_completed).length;
+      const newCompleted = (response.data.timeline || []).filter(step => step.is_completed).length;
       setCompletedCount(newCompleted);
       
     } catch (error) {
@@ -358,10 +361,7 @@ const TimelinePage = () => {
     }
   };
 
-  const categories = Object.keys(timelineData.categories);
-  const filteredSteps = activeCategory === 'all' 
-    ? timelineData.full.steps 
-    : timelineData.categories[activeCategory] || [];
+  const filteredSteps = timelineData.timeline || [];
 
   const timelineLinks = [
     { name: "UK GOV TIMELINE", url: "https://www.gov.uk/browse/visas-immigration", description: "Official protocol guidance" },
@@ -383,7 +383,7 @@ const TimelinePage = () => {
           
           <ProgressWizard 
             currentStep={completedCount + 1} 
-            totalSteps={timelineData.full.steps.length} 
+            totalSteps={filteredSteps.length} 
             completedSteps={completedCount} 
           />
         </div>
@@ -403,35 +403,6 @@ const TimelinePage = () => {
                 <h3 className="font-bold text-white mb-3 font-mono tracking-wide">{link.name}</h3>
                 <p className="text-gray-400 text-sm font-mono">{link.description}</p>
               </a>
-            ))}
-          </div>
-        </div>
-
-        {/* Category Filter */}
-        <div className="mb-8">
-          <div className="flex flex-wrap gap-2 justify-center">
-            <button
-              onClick={() => setActiveCategory('all')}
-              className={`px-6 py-3 font-mono font-bold tracking-wider border-2 transition-all duration-300 ${
-                activeCategory === 'all'
-                  ? 'bg-white text-black border-white'
-                  : 'bg-black text-white border-gray-600 hover:border-white'
-              }`}
-            >
-              ALL OPERATIONS ({timelineData.full.steps.length})
-            </button>
-            {categories.map(category => (
-              <button
-                key={category}
-                onClick={() => setActiveCategory(category)}
-                className={`px-6 py-3 font-mono font-bold tracking-wider border-2 transition-all duration-300 uppercase ${
-                  activeCategory === category
-                    ? 'bg-white text-black border-white'
-                    : 'bg-black text-white border-gray-600 hover:border-white'
-                }`}
-              >
-                {category.replace('_', ' ')} ({(timelineData.categories[category] || []).length})
-              </button>
             ))}
           </div>
         </div>
@@ -476,43 +447,10 @@ const TimelinePage = () => {
                         <span className="px-3 py-1 text-sm border border-gray-600 text-gray-300 font-mono tracking-wider uppercase">
                           {step.category}
                         </span>
-                        <span className={`px-3 py-1 text-sm border font-mono tracking-wider uppercase ${
-                          step.priority === 'high' ? 'border-red-600 text-red-400 bg-red-900' :
-                          step.priority === 'medium' ? 'border-yellow-600 text-yellow-400 bg-yellow-900' :
-                          'border-green-600 text-green-400 bg-green-900'
-                        }`}>
-                          {step.priority} PRIORITY
-                        </span>
-                        {step.due_date && (
-                          <span className="px-3 py-1 text-sm border border-purple-600 text-purple-400 bg-purple-900 font-mono tracking-wider">
-                            DUE: {new Date(step.due_date).toLocaleDateString()}
-                          </span>
-                        )}
                       </div>
                     </div>
                   </div>
                   <p className="text-gray-300 mb-6 leading-relaxed font-mono">{step.description}</p>
-                  
-                  {step.required_documents && step.required_documents.length > 0 && (
-                    <div className="mb-6">
-                      <h4 className="font-semibold text-white mb-3 font-mono tracking-wider">REQUIRED DOCUMENTATION:</h4>
-                      <ul className="list-none space-y-2">
-                        {step.required_documents.map((doc, idx) => (
-                          <li key={idx} className="text-gray-400 font-mono text-sm flex items-start">
-                            <span className="text-white mr-3">▸</span>
-                            {doc}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                  
-                  {step.estimated_cost && (
-                    <div className="flex items-center text-sm text-gray-400 mb-4 space-x-6 font-mono">
-                      <span>COST: {step.estimated_cost}</span>
-                      <span>DURATION: {step.estimated_duration}</span>
-                    </div>
-                  )}
                 </div>
                 
                 {step.is_completed && (
@@ -527,133 +465,10 @@ const TimelinePage = () => {
 
         {filteredSteps.length === 0 && (
           <div className="text-center py-12">
-            <p className="text-gray-400 text-lg font-mono">NO OPERATIONS FOUND FOR THIS CATEGORY.</p>
+            <p className="text-gray-400 text-lg font-mono">LOADING OPERATIONAL DATA...</p>
           </div>
         )}
       </div>
     </div>
   );
 };
-
-// Main App Component
-const App = () => {
-  return (
-    <Router>
-      <AppContent />
-    </Router>
-  );
-};
-
-const AppContent = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [user, setUser] = useState("");
-
-  const handleLogin = (username) => {
-    setUser(username);
-    setIsAuthenticated(true);
-  };
-
-  const handleLogout = () => {
-    setUser("");
-    setIsAuthenticated(false);
-  };
-
-  if (!isAuthenticated) {
-    return <LoginPage onLogin={handleLogin} />;
-  }
-
-  return <AuthenticatedApp user={user} onLogout={handleLogout} />;
-};
-
-// Authentication Components with Noir Theme
-const LoginPage = ({ onLogin }) => {
-  const [credentials, setCredentials] = useState({ username: '', password: '' });
-
-  const handleLogin = (e) => {
-    e.preventDefault();
-    onLogin(credentials.username);
-  };
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-black to-gray-900 flex items-center justify-center p-6">
-      <div className="bg-black border-2 border-gray-600 p-12 w-full max-w-md">
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold font-serif text-white mb-4">
-            RELOCATE
-          </h1>
-          <div className="text-sm text-gray-400 font-mono tracking-widest mb-2">
-            CLASSIFIED ACCESS
-          </div>
-          <p className="text-gray-500 font-mono text-xs">PHOENIX → PEAK DISTRICT</p>
-        </div>
-        
-        <form onSubmit={handleLogin} className="space-y-6">
-          <div>
-            <label className="block text-gray-400 text-sm font-mono font-bold mb-3 tracking-wider uppercase">
-              USERNAME
-            </label>
-            <input
-              type="text"
-              value={credentials.username}
-              onChange={(e) => setCredentials({...credentials, username: e.target.value})}
-              className="w-full p-4 border-2 border-gray-600 bg-black text-white font-mono focus:border-white focus:outline-none transition-all duration-300"
-              placeholder="ENTER CREDENTIALS"
-              required
-            />
-          </div>
-          
-          <div>
-            <label className="block text-gray-400 text-sm font-mono font-bold mb-3 tracking-wider uppercase">
-              PASSWORD
-            </label>
-            <input
-              type="password"
-              value={credentials.password}
-              onChange={(e) => setCredentials({...credentials, password: e.target.value})}
-              className="w-full p-4 border-2 border-gray-600 bg-black text-white font-mono focus:border-white focus:outline-none transition-all duration-300"
-              placeholder="ENTER AUTHORIZATION"
-              required
-            />
-          </div>
-          
-          <button
-            type="submit"
-            className="w-full bg-white text-black font-mono font-bold py-4 px-6 tracking-wider hover:bg-gray-200 transition-all duration-300 border-2 border-white"
-          >
-            [INITIATE ACCESS]
-          </button>
-        </form>
-        
-        <div className="mt-8 text-center">
-          <p className="text-gray-500 text-xs font-mono">
-            AUTHORIZED PERSONNEL ONLY
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const AuthenticatedApp = ({ user, onLogout }) => {
-  const location = useLocation();
-
-  return (
-    <>
-      <Navigation user={user} onLogout={onLogout} currentPath={location.pathname} />
-      <Routes>
-        <Route path="/dashboard" element={<DashboardPage />} />
-        <Route path="/timeline" element={<TimelinePage />} />
-        <Route path="/progress" element={<div className="min-h-screen bg-black text-white p-6"><h1 className="text-center">PROGRESS PAGE - UNDER CONSTRUCTION</h1></div>} />
-        <Route path="/visa" element={<div className="min-h-screen bg-black text-white p-6"><h1 className="text-center">LEGAL PAGE - UNDER CONSTRUCTION</h1></div>} />
-        <Route path="/employment" element={<div className="min-h-screen bg-black text-white p-6"><h1 className="text-center">EMPLOYMENT PAGE - UNDER CONSTRUCTION</h1></div>} />
-        <Route path="/housing" element={<div className="min-h-screen bg-black text-white p-6"><h1 className="text-center">HOUSING PAGE - UNDER CONSTRUCTION</h1></div>} />
-        <Route path="/resources" element={<div className="min-h-screen bg-black text-white p-6"><h1 className="text-center">RESOURCES PAGE - UNDER CONSTRUCTION</h1></div>} />
-        <Route path="/logistics" element={<div className="min-h-screen bg-black text-white p-6"><h1 className="text-center">LOGISTICS PAGE - UNDER CONSTRUCTION</h1></div>} />
-        <Route path="/analytics" element={<div className="min-h-screen bg-black text-white p-6"><h1 className="text-center">ANALYTICS PAGE - UNDER CONSTRUCTION</h1></div>} />
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
-      </Routes>
-    </>
-  );
-};
-
-export default App;
